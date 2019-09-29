@@ -5,7 +5,7 @@ import math
 import pickle
 
 from pprint import pprint
-from operator import add
+from operator import add, mul
 from numpy.testing import assert_raises
 
 import graphkit.network as network
@@ -225,6 +225,61 @@ def test_deleted_optional():
     results = net({'a': 4, 'b': 3}, outputs=['sum2'])
     assert 'sum2' in results
 
+
+def test_graph_merge_dropping() -> None:
+    """
+    This method tests the merging behaviour when node2 gets merged
+    with node1 with a different interface, and node3 depends on node2.
+    We observe the following:
+    * The output of node2 can't be reached through the graph
+    * node3 will be dropped from the graph with no error reported
+    * No graph2 computation will be performed by the merged graph
+    """
+    
+    def abspow(a: float, p: float) -> float:
+        return abs(a) ** p
+
+    def _graph1():
+        mul1 = operation(name="mul1", needs=["a", "b",
+                                                        modifiers.optional("c")],
+                                    provides=["ab(c)"])(mul)
+        sum1 = operation(name="sum1", needs=["a", "ab(c)"],
+                                    provides=["a_plus_ab(c)"])(add)
+        ap1 = operation(name="abspow1", needs=["a_plus_ab(c)"],
+                                    params={"p": 3},
+                                    provides=["a_plus_ab(c)_cubed"])(
+                                        abspow)
+        # Ordering in operation collection doesn't matter
+        # needs/provides takes care of that
+        return compose(name="test_graph")(sum1, mul1, ap1)
+
+    def _graph2():
+        # create graph2 with breaking interface
+        mul2 = operation(name="mul1", needs=["a", "b",
+                                                        modifiers.optional("c")],
+                                    provides=["ab(c)"])(mul)
+        # note the difference: provides "some_sum"
+        sum2 = operation(name="sum1", needs=["a", "ab(c)"],
+                                    provides=["some_sum"])(add)
+        # this node depends on "some_sum"
+        ap2 = operation(name="abspow2", needs=["some_sum"],
+                                    params={"p": 2},
+                                    provides=["one_squared"])(abspow)
+        return compose(name="graph2")(mul2, sum2, ap2)
+
+    # merge both graphs
+    g1, g2 = _graph1(), _graph2()
+    graph3 = compose(name="graph3", merge=True)(g1, g2)
+    out3 = graph3({"a": 2, "b": 5})
+
+    # "one_squared" is not present because abspow2 was dropped
+    # This looks like a regular forward propagation of graph 1
+    expected_out3 = {"a": 2, "b": 5, "ab(c)": 10,
+                     "a_plus_ab(c)": 12,
+                     "a_plus_ab(c)_cubed": 1728}
+    #
+    assert out3 == expected_out3
+    
 
 
 def test_parallel_execution():
