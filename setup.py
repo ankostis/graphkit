@@ -16,7 +16,7 @@ with io.open("graphkit/__init__.py", "rt", encoding="utf8") as f:
     version = re.search(r'__version__ = "(.*?)"', f.read()).group(1)
 
 plot_reqs = ["matplotlib", "pydot"]  # to test plot  # to test plot
-test_reqs = plot_reqs + ["pytest", "pytest-cov", "pytest-sphinx"]
+test_reqs = plot_reqs + ["pytest", "pytest-cov", "pytest-sphinx", "sphinx_rtd_theme"]
 
 setup(
     name="graphkit",
