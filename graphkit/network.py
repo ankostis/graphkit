@@ -44,7 +44,7 @@ Computations are based on 5 data-structures:
 
     The *instructions* items achieve the following:
 
-    - :class:`_EvictInstruction`: evict items from `solution` as soon as
+    - :class:`_EvictInstruction`: evicts items from `solution` as soon as
         they are not needed further down the dag, to reduce memory footprint
         while computing.
 
@@ -581,13 +581,11 @@ class Network(plot.Plotter):
         :param outputs:
             outp-names to decide whether to add (and which) evict-instructions
 
-        In the list :class:`_EvictInstructions` steps (DA) are inserted between
-        operation nodes to reduce the memory footprint of solution.
-        A DA is inserted whenever a *need* is not used by any other *operation*
-        further down the DAG.
-        Note that since the `solutions` are not shared across `compute()` calls,
-        any memory-reductions are for as long as a single computation runs.
-
+        Instances of :class:`_EvictInstructions` are inserted in `steps` between
+        operation nodes to reduce the memory footprint of solutions while 
+        the computation is running.
+        An evict-instruction is inserted whenever a *need* is not used
+        by any other *operation* further down the DAG.
         """
 
         steps = []
@@ -601,7 +599,7 @@ class Network(plot.Plotter):
 
             if isinstance(node, _DataNone):
                 if node in inputs and dag.pred[node]:
-                    # Instruction pinning only when there is another operation
+                    # Add a pin-instruction only when there is another operation
                     # generating this data as output.
                     steps.append(_PinInstruction(node))
 
@@ -727,7 +725,7 @@ class Network(plot.Plotter):
 
             if outputs:
                 # Filter outputs to just return what's requested.
-                # Otherwise, eturn the whole solution as output,
+                # Otherwise, return the whole solution as output,
                 # including input and intermediate data nodes.
                 # TODO: assert no other outputs exists due to evict-instructions.
                 solution = dict(i for i in solution.items() if i[0] in outputs)
