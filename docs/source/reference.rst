@@ -2,6 +2,15 @@
 API Reference
 =============
 
+Package: `graphkit`
+===================
+
+.. automodule:: graphkit
+     :members:
+     :undoc-members:
+     :special-members:
+     :private-members:
+
 Module: `base`
 ==============
 
@@ -21,7 +30,6 @@ Module: `network`
 
 .. automodule:: graphkit.network
      :members:
-     :undoc-members:
 
 Module: `plot`
 ==============

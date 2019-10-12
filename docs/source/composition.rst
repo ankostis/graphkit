@@ -86,7 +86,9 @@ This can be useful if you have a graph-operation that accepts alternative forms 
 Adding on to an existing computation graph
 ------------------------------------------
 
-Sometimes you will have an existing computation graph to which you want to add operations.  This is simple, since ``compose`` can compose whole graphs along with individual ``operation`` instances.  For example, if we have ``graph`` as above, we can add another operation to it to create a new graph::
+Sometimes you will have an existing computation graph to which you want to add operations.
+This is simple, since ``compose`` can compose whole graphs along with individual ``operation`` instances.
+For example, if we have ``graph`` as above, we can add another operation to it to create a new graph::
 
    >>> # Add another subtraction operation to the graph.
    >>> bigger_graph = compose(name="bigger_graph")(
@@ -99,7 +101,9 @@ Sometimes you will have an existing computation graph to which you want to add o
    >>> sol
    {'a_minus_ab_minus_c': -13}
 
-This yields a graph which looks like this (see :ref:`plotting`):
+This yields a graph which looks like this (see :ref:`plotting`)::
+
+   >>> bigger_graph.plot('bigger_example_graph.svg', solution=sol)  # doctest: +SKIP
 
 .. image:: images/bigger_example_graph.svg
 
@@ -155,12 +159,12 @@ with the folllowing properties, as a debug aid:
 ...        operation(name="screamer", needs=['a'], provides=["foo"])(scream)
 ...     )({'a': None})
 ... except ValueError as ex:
-...     pprint(ex.graphkit_aid)
+...     pprint(ex.graphkit_jetsam)
 {'network':
-  ...
+...
  'operation': FunctionalOperation(name='screamer', needs=['a'], provides=['foo']),
  'operation_args': {'args': [None], 'kwargs': {}},
- 'operation_fnouts': None,
+ 'operation_fnouts': ['foo'],
  'operation_outs': None,
  'operation_results': None,
  'plan': ExecutionPlan(inputs=('a',), outputs=(), steps:

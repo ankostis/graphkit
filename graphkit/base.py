@@ -1,11 +1,131 @@
 # Copyright 2016, Yahoo Inc.
 # Licensed under the terms of the Apache License, Version 2.0. See the LICENSE file associated with the project for terms.
+import contextlib
+import logging
+
 try:
     from collections import abc
 except ImportError:
     import collections as abc
 
 from . import plot
+
+
+log = logging.getLogger(__name__)
+
+
+class _Jetsam:
+    """The "buoy" holding data from the managed-block to salvage, in case of errors."""
+
+    locs = None
+    keys_to_salvage = None
+
+    def config_salvation(self, locs, **keys_to_salvage):
+        """
+        Set the managed-block's ``locals()`` and explain which ones to salvage.
+
+        :param locs:
+            ``locals()`` from the context-manager's block containing vars
+            to be salvaged in case of exception
+        :param keys_to_salvage:
+            a mapping of destination-annotation-key --> source-locals-keys;
+            if a value is callable, the value is retrieved by calling it
+        """
+        ## Fail EARLY for the developer to see.
+        #
+        assert isinstance(locs, dict), (
+            "Bad `locs` given to jetsam`, not a dict:",
+            locs,
+        )
+        assert all(isinstance(v, str) or callable(v) for v in keys_to_salvage.values()), (
+            "Bad `keys_to_salvage` given to jetsam`:",
+            keys_to_salvage,
+        )
+        self.locs = locs
+        self.keys_to_salvage = keys_to_salvage
+
+    def _annotate(self, annotations):
+        if self.locs is None or self.keys_to_salvage is None:
+            log.warning("No-op jetsam!  Call properly config_salvation().")
+            return
+
+        for dst_key, src in self.keys_to_salvage.items():
+            try:
+                if callable(src):
+                    breakpoint()
+                    salvaged_value = src()
+                else:
+                    salvaged_value = self.locs.get(src)
+                annotations.setdefault(dst_key, salvaged_value)
+            except Exception as ex:
+                try:
+                    log.warning(
+                        "Supressed error while salvaging jetsam item (%r, %r): %r"
+                        % (dst_key, src, ex)
+                    )
+                    ## Ensure the key exists.
+                    annotations.setdefault(dst_key, None)
+                except Exception as ex2:
+                    log.warning("Supressed error while nulling jetsam item: %r" % ex2)
+
+
+@contextlib.contextmanager
+def failure_jetsam():
+    """
+    Debug-aid to annotate exceptions with salvaged values from wrapped functions.
+    
+    :raise:
+        any exception raised by the wrapped function, annotated with values
+        assigned as atrributes on this context-manager
+
+    - Any attrributes attached on this manager are attached as a new dict on
+      the raised exception as new  ``graphkit_jetsam`` attrribute with a dict as value.
+    - If the exception is already annotated, any new items are inserted, 
+      but existing ones are preserved.
+    
+
+    **Example:**
+
+
+        >>> with failure_jetsam() as jetsam:
+        ...     jetsam.config_salvation(locals(), a="salvaged_a", b="salvaged_b")
+        ...     a = 1
+        ...     raise Exception()
+
+        >>> import sys
+        >>> sys.last_value.graphkit_jetsam
+        {'salvaged_a': 1, "salvaged_b": None}
+
+
+    ** Reason:**
+    
+    Graphs may become arbitrary deep.  Debugging such graphs is notoriously hard.
+    
+    The purpose is not to have to start a debugger-session every time to inspect
+    the root-cause for an error, without precluding that.
+
+    Note that salvaging values with a simple try/except block around each function
+    would block the debugger from landing on the real cause of the error - it would
+    land on that block;  and that could be many nested levels above it.
+
+    The "forensics" salvaged is at the control of theauthor of the function
+    (like all decent nautical jetsam operations).
+    """
+    jetsam = _Jetsam()
+    try:
+        yield jetsam
+    except Exception as ex_to_annotate:
+        try:
+            annotations = getattr(ex_to_annotate, "graphkit_jetsam", None)
+            if not isinstance(annotations, dict):
+                annotations = {}
+                setattr(ex_to_annotate, "graphkit_jetsam", annotations)
+
+            jetsam._annotate(annotations)
+        except Exception as ex:
+            log.warning("Supressed error while annotating exception: %r", ex)
+
+        raise  # without ex-arg, not to insert my frame
 
 
 class Data(object):
@@ -99,29 +219,22 @@ class Operation(object):
         raise NotImplementedError("Define callable of %r!" % self)
 
     def _compute(self, named_inputs, outputs=None):
-        try:
-            args = [named_inputs[d] for d in self.needs]
-            results = self.compute(args)
+        with failure_jetsam() as jetsam:
+            jetsam.operation = self
+            jetsam.operation_outs = outputs
+            jetsam.operation_args = args = [named_inputs[d] for d in self.needs]
+            jetsam.operation_results = results = self.compute(args)
+            jetsam.operation_fnouts = self.provides
 
-            results = zip(self.provides, results)
+            jetsam.operation_results = results = zip(self.provides, results)
 
             if outputs:
                 outs = set(outputs)
-                results = filter(lambda x: x[0] in outs, results)
+                jetsam.operation_results = results = filter(
+                    lambda x: x[0] in outs, results
+                )
 
             return dict(results)
-        except Exception as ex:
-            ## Annotate exception with debugging aid on errors.
-            #
-            locs = locals()
-            err_aid = getattr(ex, "graphkit_aid", {})
-            err_aid.setdefault("operation", self)
-            err_aid.setdefault("operation_args", locs.get("args"))
-            err_aid.setdefault("operation_fnouts", locs.get("outputs"))
-            err_aid.setdefault("operation_outs", locs.get("outputs"))
-            err_aid.setdefault("operation_results", locs.get("results"))
-            setattr(ex, "graphkit_aid", err_aid)
-            raise
 
     def _after_init(self):
         """
@@ -157,7 +270,8 @@ class Operation(object):
         load from pickle and instantiate the detector
         """
         for k in iter(state):
-            self.__setattr__(k, state[k])
+            if k != "graphkit_jetsam":
+                self.__setattr__(k, state[k])
         self._after_init()
 
     def __repr__(self):

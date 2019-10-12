@@ -29,8 +29,14 @@ script:
     if [[ "$TRAVIS_PYTHON_VERSION" = '3.7' ]]; then
       pytest --cov=graphkit -m 'slow or not slow'
     else
-      pytest --cov=graphkit test/ 
+      pytest --cov=graphkit test/
     fi
+
+  # Check site
+  - |
+    if [[ "$TRAVIS_PYTHON_VERSION" = '3.7' ]]; then
+      python setup.py build_sphinx -W
+    else
 
 deploy:
   provider: pypi

@@ -3,7 +3,7 @@
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
 
-from .base import NetworkOperation, Operation
+from .base import failure_jetsam, NetworkOperation, Operation
 from .modifiers import optional, sideffect
 from .network import Network
 
@@ -14,7 +14,10 @@ class FunctionalOperation(Operation):
         Operation.__init__(self, **kwargs)
 
     def _compute(self, named_inputs, outputs=None):
-        try:
+        with failure_jetsam() as jetsam:
+            jetsam.operation = self
+            jetsam.operation_outs = outputs
+
             args = [
                 named_inputs[n]
                 for n in self.needs
@@ -32,39 +35,29 @@ class FunctionalOperation(Operation):
             # Combine params and optionals into one big glob of keyword arguments.
             kwargs = {k: v for d in (self.params, optionals) for k, v in d.items()}
 
-            # Don't expect sideffect outputs.
-            provides = [n for n in self.provides if not isinstance(n, sideffect)]
+            jetsam.operation_args = {"args": args, "kwargs": kwargs}
 
-            result = self.fn(*args, **kwargs)
+            # Don't expect sideffect outputs.
+            jetsam.operation_fnouts = provides = [
+                n for n in self.provides if not isinstance(n, sideffect)
+            ]
+
+            jetsam.operation_results = results = self.fn(*args, **kwargs)
 
             if not provides:
                 # All outputs were sideffects.
                 return {}
 
             if len(provides) == 1:
-                result = [result]
+                results = [results]
 
-            result = zip(provides, result)
+            results = zip(provides, results)
             if outputs:
                 outputs = set(n for n in outputs if not isinstance(n, sideffect))
-                result = filter(lambda x: x[0] in outputs, result)
+                results = filter(lambda x: x[0] in outputs, results)
+            jetsam.operation_results = results
 
-            return dict(result)
-        except Exception as ex:
-            ## Annotate exception with debugging aid on errors.
-            #
-            locs = locals()
-            err_aid = getattr(ex, "graphkit_aid", {})
-            err_aid.setdefault("operation", self)
-            err_aid.setdefault(
-                "operation_args",
-                {"args": locs.get("args"), "kwargs": locs.get("kwargs")},
-            )
-            err_aid.setdefault("operation_fnouts", locs.get("outputs"))
-            err_aid.setdefault("operation_outs", locs.get("outputs"))
-            err_aid.setdefault("operation_results", locs.get("results"))
-            setattr(ex, "graphkit_aid", err_aid)
-            raise
+            return dict(results)
 
     def __call__(self, *args, **kwargs):
         return self.fn(*args, **kwargs)
