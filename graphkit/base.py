@@ -17,56 +17,7 @@ log = logging.getLogger(__name__)
 class _Jetsam:
     """The "buoy" holding data from the managed-block to salvage, in case of errors."""
 
-    locs = None
-    keys_to_salvage = None
-
-    def config_salvation(self, locs, **keys_to_salvage):
-        """
-        Set the managed-block's ``locals()`` and explain which ones to salvage.
-
-        :param locs:
-            ``locals()`` from the context-manager's block containing vars
-            to be salvaged in case of exception
-        :param keys_to_salvage:
-            a mapping of destination-annotation-key --> source-locals-keys;
-            if a value is callable, the value is retrieved by calling it
-        """
-        ## Fail EARLY for the developer to see.
-        #
-        assert isinstance(locs, dict), (
-            "Bad `locs` given to jetsam`, not a dict:",
-            locs,
-        )
-        assert all(isinstance(v, str) or callable(v) for v in keys_to_salvage.values()), (
-            "Bad `keys_to_salvage` given to jetsam`:",
-            keys_to_salvage,
-        )
-        self.locs = locs
-        self.keys_to_salvage = keys_to_salvage
-
-    def _annotate(self, annotations):
-        if self.locs is None or self.keys_to_salvage is None:
-            log.warning("No-op jetsam!  Call properly config_salvation().")
-            return
-
-        for dst_key, src in self.keys_to_salvage.items():
-            try:
-                if callable(src):
-                    breakpoint()
-                    salvaged_value = src()
-                else:
-                    salvaged_value = self.locs.get(src)
-                annotations.setdefault(dst_key, salvaged_value)
-            except Exception as ex:
-                try:
-                    log.warning(
-                        "Supressed error while salvaging jetsam item (%r, %r): %r"
-                        % (dst_key, src, ex)
-                    )
-                    ## Ensure the key exists.
-                    annotations.setdefault(dst_key, None)
-                except Exception as ex2:
-                    log.warning("Supressed error while nulling jetsam item: %r" % ex2)
+    pass
 
 
 @contextlib.contextmanager
@@ -88,13 +39,12 @@ def failure_jetsam():
 
 
         >>> with failure_jetsam() as jetsam:
-        ...     jetsam.config_salvation(locals(), a="salvaged_a", b="salvaged_b")
-        ...     a = 1
+        ...     jetsam.a = 1
         ...     raise Exception()
 
         >>> import sys
         >>> sys.last_value.graphkit_jetsam
-        {'salvaged_a': 1, "salvaged_b": None}
+        {'salvaged_a': 1}
 
 
     ** Reason:**
@@ -104,11 +54,12 @@ def failure_jetsam():
     The purpose is not to have to start a debugger-session every time to inspect
     the root-cause for an error, without precluding that.
 
-    Note that salvaging values with a simple try/except block around each function
-    would block the debugger from landing on the real cause of the error - it would
-    land on that block;  and that could be many nested levels above it.
+    Had to use a context-manager to salvage values, because with a simple
+    try/except block around each function would block the debugger from landing
+    on the real cause of the error - it would land on that block;  and that could be
+    many nested levels before the root cause.
 
-    The "forensics" salvaged is at the control of theauthor of the function
+    The "forensics" salvaged is at the control of the author of the function
     (like all decent nautical jetsam operations).
     """
     jetsam = _Jetsam()
@@ -121,7 +72,18 @@ def failure_jetsam():
                 annotations = {}
                 setattr(ex_to_annotate, "graphkit_jetsam", annotations)
 
-            jetsam._annotate(annotations)
+            for dst_key, src in vars(jetsam).items():
+                try
+                    annotations.setdefault(dst_key, salvaged_value)
+                except Exception as ex:
+                        log.warning(
+                            "Supressed error while salvaging jetsam item (%r, %r): %r"
+                            % (dst_key, src, ex)
+                        )
+                        ## Ensure the key exists.
+                        annotations.setdefault(dst_key, None)
+                    except Exception as ex2:
+                        log.warning("Supressed error while nulling jetsam item: %r" % ex2)
         except Exception as ex:
             log.warning("Supressed error while annotating exception: %r", ex)
 
@@ -226,15 +188,15 @@ class Operation(object):
             jetsam.operation_results = results = self.compute(args)
             jetsam.operation_fnouts = self.provides
 
-            jetsam.operation_results = results = zip(self.provides, results)
+            outs = set(outputs) if outputs else None
 
-            if outputs:
-                outs = set(outputs)
-                jetsam.operation_results = results = filter(
-                    lambda x: x[0] in outs, results
-                )
+            jetsam.operation_results = results = dict(
+                (name, out)
+                for name, out in zip(self.provides, results)
+                if not outs or name in outs
+            )
 
-            return dict(results)
+            return results
 
     def _after_init(self):
         """
