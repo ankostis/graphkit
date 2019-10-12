@@ -1,11 +1,71 @@
 # Copyright 2016, Yahoo Inc.
 # Licensed under the terms of the Apache License, Version 2.0. See the LICENSE file associated with the project for terms.
+import contextlib
+import logging
+import sys
+
 try:
     from collections import abc
 except ImportError:
     import collections as abc
 
-from . import plot
+from . import annotate_exceptions, plot
+
+
+log = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def exception_annotated(locs, **keys_to_salvage):
+    """
+    Annotate exception with debugging aid, or pass them through for debugger sesions.
+
+    :param locs:
+        ``locals()`` from the function needeing to annotate its exceptions
+    :param keys_to_salvage:
+        a mapping of annotation-key locals-keys
+
+    - An annotated exception has a dict with salvaged keys attached as new 
+      ``grapkit_aid`` attrribute.
+    - The decision whether to annotate or pass-through exceptions is based on
+      the :data:`graphkit.annotate_exceptions` global flag.
+
+    :raise:
+        any exception raised by the wrapped function, annotated (or not)
+    """
+    # Annotate only if user said so or NO debugger attached
+    # check from https://stackoverflow.com/a/334090/548792
+    is_annotate = (
+        (not sys.gettrace()) if annotate_exceptions is None else annotate_exceptions
+    )
+    log.debug(
+        "Exception annotations enabled? %s, graphkit.annotate_exceptions: %s, systrace: %s",
+        is_annotate,
+        annotate_exceptions,
+        sys.gettrace(),
+    )
+    if is_annotate:
+        try:
+            yield
+        except Exception as ex:
+            annotations = getattr(ex, "graphkit_aid", {})
+
+            for dst_key, src in keys_to_salvage.items():
+                try:
+                    if callable(src):
+                        src = src(ex, locs)
+                    annotations.setdefault(dst_key, src)
+                except Exception as itemex:
+                    log.warning(
+                        "Supressed error while retrieving exception-annotation %r: %r"
+                        % (dst_key, itemex)
+                    )
+
+            setattr(ex, "graphkit_aid", annotations)
+
+            raise  # without ex-arg, not to insert my frame
+    else:
+        yield
 
 
 class Data(object):
@@ -99,7 +159,14 @@ class Operation(object):
         raise NotImplementedError("Define callable of %r!" % self)
 
     def _compute(self, named_inputs, outputs=None):
-        try:
+        with exception_annotated(
+            locals(),
+            operation="self",
+            operation_args="args",
+            operation_fnouts="outputs",
+            operation_outs="outputs",
+            operation_results="results",
+        ):
             args = [named_inputs[d] for d in self.needs]
             results = self.compute(args)
 
@@ -110,18 +177,6 @@ class Operation(object):
                 results = filter(lambda x: x[0] in outs, results)
 
             return dict(results)
-        except Exception as ex:
-            ## Annotate exception with debugging aid on errors.
-            #
-            locs = locals()
-            err_aid = getattr(ex, "graphkit_aid", {})
-            err_aid.setdefault("operation", self)
-            err_aid.setdefault("operation_args", locs.get("args"))
-            err_aid.setdefault("operation_fnouts", locs.get("outputs"))
-            err_aid.setdefault("operation_outs", locs.get("outputs"))
-            err_aid.setdefault("operation_results", locs.get("results"))
-            setattr(ex, "graphkit_aid", err_aid)
-            raise
 
     def _after_init(self):
         """

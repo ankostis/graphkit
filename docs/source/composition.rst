@@ -98,6 +98,7 @@ Sometimes you will have an existing computation graph to which you want to add o
    >>> sol = bigger_graph({'a': 2, 'b': 5, 'c': 5}, outputs=["a_minus_ab_minus_c"])
    >>> sol
    {'a_minus_ab_minus_c': -13}
+   >>> bigger_graph.plot('bigger_example_graph.svg', solution=sol)
 
 This yields a graph which looks like this (see :ref:`plotting`):
 

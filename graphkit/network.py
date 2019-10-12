@@ -77,7 +77,7 @@ from boltons.setutils import IndexedSet as iset
 from networkx import DiGraph
 
 from . import plot
-from .base import Operation
+from .base import exception_annotated, Operation
 from .modifiers import optional, sideffect
 
 log = logging.getLogger(__name__)
@@ -257,15 +257,8 @@ class ExecutionPlan(
         solution[value_name] = inputs[value_name]
 
     def _call_operation(self, op, solution):
-        try:
+        with exception_annotated(locals(), plan="self"):
             return op._compute(solution)
-        except Exception as ex:
-            ## Annotate exception with debugging aid on errors.
-            #
-            err_aid = getattr(ex, "graphkit_aid", {})
-            err_aid.setdefault("plan", self)
-            setattr(ex, "graphkit_aid", err_aid)
-            raise
 
     def _execute_thread_pool_barrier_method(
         self, inputs, solution, overwrites, thread_pool_size=10
@@ -710,7 +703,9 @@ class Network(plot.Plotter):
 
         :returns: a dictionary of output data objects, keyed by name.
         """
-        try:
+        with exception_annotated(
+            locals(), network="self", plan="plan", solution="solution"
+        ):
             assert (
                 isinstance(outputs, (list, tuple)) or outputs is None
             ), "The outputs argument must be a list"
@@ -728,16 +723,7 @@ class Network(plot.Plotter):
                 # Otherwise, return the whole solution as output,
                 # including input and intermediate data nodes.
                 # TODO: assert no other outputs exists due to evict-instructions.
-                solution = dict(i for i in solution.items() if i[0] in outputs)
+                solution1 = dict(i for i in solution.items() if i[0] in outputs)
+                assert solution == solution1
 
             return solution
-        except Exception as ex:
-            ## Annotate exception with debugging aid on errorrs.
-            #
-            locs = locals()
-            err_aid = getattr(ex, "graphkit_aid", {})
-            err_aid.setdefault("network", locs.get("self"))
-            err_aid.setdefault("plan", locs.get("plan"))
-            err_aid.setdefault("solution", locs.get("solution"))
-            setattr(ex, "graphkit_aid", err_aid)
-            raise

@@ -3,7 +3,7 @@
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
 
-from .base import NetworkOperation, Operation
+from .base import exception_annotated,  NetworkOperation, Operation
 from .modifiers import optional, sideffect
 from .network import Network
 
@@ -14,7 +14,19 @@ class FunctionalOperation(Operation):
         Operation.__init__(self, **kwargs)
 
     def _compute(self, named_inputs, outputs=None):
-        try:
+        with exception_annotated(
+            locals(),
+            operation="self",
+            operation_args=(
+                lambda ex, locs: {
+                    "args": locs.get("args"),
+                    "kwargs": locs.get("kwargs"),
+                }
+            ),
+            operation_fnouts="outputs",
+            operation_outs="outputs",
+            operation_results="results",
+        ):
             args = [
                 named_inputs[n]
                 for n in self.needs
@@ -50,21 +62,6 @@ class FunctionalOperation(Operation):
                 result = filter(lambda x: x[0] in outputs, result)
 
             return dict(result)
-        except Exception as ex:
-            ## Annotate exception with debugging aid on errors.
-            #
-            locs = locals()
-            err_aid = getattr(ex, "graphkit_aid", {})
-            err_aid.setdefault("operation", self)
-            err_aid.setdefault(
-                "operation_args",
-                {"args": locs.get("args"), "kwargs": locs.get("kwargs")},
-            )
-            err_aid.setdefault("operation_fnouts", locs.get("outputs"))
-            err_aid.setdefault("operation_outs", locs.get("outputs"))
-            err_aid.setdefault("operation_results", locs.get("results"))
-            setattr(ex, "graphkit_aid", err_aid)
-            raise
 
     def __call__(self, *args, **kwargs):
         return self.fn(*args, **kwargs)
