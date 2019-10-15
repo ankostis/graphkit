@@ -3,7 +3,7 @@
 Graphtik
 ========
 
-|travis-status| doc-status| |cover-status| |gh-version| |pypi-version| |python-ver|
+|python-ver| |gh-version| |pypi-version| |travis-status| |doc-status| |cover-status|
 |dev-status| |downloads-count| |codestyle| |proj-lic|
 
 |gh-watch| |gh-star| |gh-fork| |gh-issues|
@@ -87,7 +87,7 @@ Code licensed under the Apache License, Version 2.0 license. See LICENSE file fo
     :alt: Travis continuous integration testing ok? (Linux)
     :target: https://travis-ci.org/pygraphkit/graphtik/builds
 
-.. |doc-status| image:: https://readthedocs.org/projects/graphtik/badge.svg?branch=master
+.. |doc-status| image:: https://img.shields.io/readthedocs/graphtik.svg?branch=master
     :alt: ReadTheDocs ok?
     :target: https://graphtik.readthedocs.org
 

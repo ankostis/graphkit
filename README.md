@@ -1,10 +1,10 @@
 # Graphtik
 
+[![Supported Python versions of latest release in PyPi](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)
 [![Latest version in PyPI](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)
 [![Latest version in GitHub](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)
-[![Supported Python versions of latest release in PyPi](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)
 [![Build Status](https://travis-ci.org/pygraphkit/graphtik.svg?branch=master)](https://travis-ci.org/pygraphkit/graphtik)
-[![Doc Status](https://readthedocs.org/projects/graphtik/badge.svg?branch=master)](https://graphtik.readthedocs.io/)
+[![Doc Status](https://img.shields.io/readthedocs/graphtik.svg?branch=master)](https://graphtik.readthedocs.io/)
 [![codecov](https://codecov.io/gh/pygraphkit/graphtik/branch/master/graph/badge.svg)](https://codecov.io/gh/pygraphkit/graphtik)
 [![License](https://img.shields.io/pypi/l/graphtik.svg)](https://img.shields.io/pypi/l/graphtik.svg)
 
