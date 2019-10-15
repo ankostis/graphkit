@@ -14,8 +14,7 @@ from . import plot
 log = logging.getLogger(__name__)
 
 
-## def jetsam(ex, locs, *salvage_vars, annotation="graphtik_jetsam", **salvage_mappings):  # bad PY2 syntax
-def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
+def jetsam(ex, locs, *salvage_vars: str, annotation="graphtik_jetsam", **salvage_mappings):
     """
     Annotate exception with salvaged values from locals().
 
@@ -27,8 +26,7 @@ def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
 
         ATTENTION: wrapped function must finally call ``locals()``, because
         *locals* dictionary only reflects local-var changes after call.
-    :param str annotation:
-        (a kwarg not seen in the signature due to PY2 compatibility)
+    :param annotation:
         the name of the attribute to attach on the exception
     :param salvage_vars:
         local variable names to save as is in the salvaged annotations dictionary.
@@ -79,8 +77,6 @@ def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
     """
     ## Fail EARLY before yielding on bad use.
     #
-    annotation = salvage_mappings.pop("annotation", "graphtik_jetsam")
-
     assert isinstance(ex, Exception), ("Bad `ex`, not an exception dict:", ex)
     assert isinstance(locs, dict), ("Bad `locs`, not a dict:", locs)
     assert all(isinstance(i, str) for i in salvage_vars), (
