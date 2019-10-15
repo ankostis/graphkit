@@ -1,50 +1,39 @@
 language: python
-
 python:
-  - "2.7"
-  - "3.5"
-  - "3.6"
-  - "3.7"
-
+- '2.7'
+- '3.5'
+- '3.6'
+- '3.7'
 addons:
   apt:
     packages:
-      - graphviz
-
-
+    - graphviz
 install:
-  - pip install Sphinx codecov packaging
-  - "python -c $'import os, packaging.version as version\\nv = version.parse(os.environ.get(\"TRAVIS_TAG\", \"1.0\")).public\\nwith open(\"VERSION\", \"w\") as f: f.write(v)'"
-  - pip install -e .[test]
-  - cd docs
-  - make clean html
-  - cd ..
-
+- pip install Sphinx codecov packaging
+- 'python -c $''import os, packaging.version as version\nv = version.parse(os.environ.get("TRAVIS_TAG",
+  "1.0")).public\nwith open("VERSION", "w") as f: f.write(v)'''
+- pip install -e .[test]
+- cd docs
+- make clean html
+- cd ..
 script:
-  # OVERRIDE pytest-defaults adopted in `setup.cfg`:
-  #
-  # Run doctests in latest Python; certainly not < PY3.6 due to unstable dicts.
-  # Also give `-m 'slow or not slow'` since `not slow` adopted in `setup.cfg`.
-  - |
-    if [[ "$TRAVIS_PYTHON_VERSION" = '3.7' ]]; then
-      pytest --cov=graphtik -m 'slow or not slow'
-    else
-      # Undo configs in setup.cfg
-      echo -e '[pytest]\nmarkers: slow' > pytest.ini
-      pytest --cov=graphtik
-    fi
-
+- |
+  if [[ "$TRAVIS_PYTHON_VERSION" = '3.7' ]]; then
+    pytest --cov=graphtik -m 'slow or not slow'
+  else
+    # Undo configs in setup.cfg
+    echo -e '[pytest]\nmarkers: slow' > pytest.ini
+    pytest --cov=graphtik
+  fi
 deploy:
   provider: pypi
-  user: graphtik-ci
+  user: __token__
   password:
-    secure: Feb5dyGHNltCFNAdta/V7v9D/SZhtbyPJN7aPFSkgQNFUY/QZCR1CvXP6KO50ZRYN6ymbpmFMknxXAe3XsxaipkdYnWKcIYy0mVsETWKPO8+Yyom3KTTYqawzVqLxKvqXHTRVW+Xa+Rgum24DDLVq5rNlagozcmNILYJh0sHiQQp4N5w6agIfsTjEMqtbnffzNvpbCuz+nBs3stva0mS0CljhzLuih9N1f0so8LK/8AVK/hxiWY5TgAfml9F/cSyeCIyQhq76owH24ldf0AbSzqd8An53+UKeGznuogcUMMz0aQLChk0pjmUKcHxOruEr+ze9fSGdCMv+wBuOAFw+W3pRJwlRoaRbz+TVi9/Q9u5nThKkBA1TjSfujVrJBcJsMdMcm+69HDeyVNNaC2DewyNByfnBRTb1zdXTrDAiA2vKgAvfSu7gj+zx+d/h6BllqEW9zSpIMc3+scOVcVwm7skcK3BBRPuFc52EEEk5muGEXjUgB6voG0Dc61u7gPw/UoMl3HrN2pVeTXWyS91ZC0u9WiyLHQLeL/QS29X1HiTpHmaWI6pAzkp7U6i3L75SenIB4o9eiSBbFNW3N0Tw2mDRFK83DmzpGOjYzyV3ZQK6wcfnSbduWlq08YTzAUYCr+GviRaFAHjrq3qPDgcoknZsDRiJ5Qpmur0d5J8fCE=
+    secure: BGZ0hMf/qY8PcN7qqS//xO/t/MCJytkBYFwgMlJeFPJqpS6cdJSxnZ2hA1edlcQPZ4TzwmHBr9TKurGQBzirYeqU+kEWE8L0YMIHasxprf8lruPqdNNJ9gT2gNXKbx+YNS4PcWHAc18g4oSqfEbc29EfOVWzW0MWuJhlK9b87lNa8wJnRkyYmFlyRHhmAOd0b4IGtiA0hDzyDfhXxMUpuW18Ms5rN/MT3hZRKCzY0Ec1cDINtKUNB+rPcu9QB1KviQq8XUBTiyeOIiRFN0XJb3MzxRlc47z1Iskx2PmVBfG9RrBYfaVQNLGKEbX9kvNYsK/0IQ5jSIl5n2jxGbC/XIOZ1fM4CY/p4GGhxFDPhcIwPkxLDaZ1PPOt8KqmfGiR1W7J4CZIo481qlNIB283GisDnQ8FM1dcFerXtbXHiw9bGwX+RlwW0ldqASQWwYBpZgpK88Ut7i7Aa+o7e9olxgVAC1NYMnblihRhdInLipDEfYnX8R28f1xuK2VlZXxrqENBxwupSyyH78IWobe01CCc4+qHbnJMA9hsdGCGkX9QU1lyzNurRF/1CYaVnsKR0/3jwW/3NkyFsGsKP/vYGG9mMyyTfSNEYCk3BtpiyBeWEpi/qNIoQhb/dK2dfYpB/EyRnH3yDjN8m3cEmnnqOTwJTDelrNyQX0b6MNxc0T8=
   on:
     repo: pygraphkit/graphtik
-    branch: master
+    branch: publish
     tags: true
-    python: 2.7
-    docs_dir: docs/build/html
-
+    python: 3.7
 after_success:
-  - codecov
+- codecov
