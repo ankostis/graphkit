@@ -2,6 +2,49 @@
 Changelog
 #########
 
+TODO
+====
++ [ ] use a "start-node" to insert input-values in solution
++ [ ] typo(test): overriden-->overriDDen
+
+
+v2.0.0b0 (15 Oct 2019): Rebranded as *Graphtik* for Pythos 3.6+
+===============================================================
+Continuation of :gh:`30` as :gh:`31`, containing review-fixes in huyng/graphkit#1.
+
+Network
+-------
++ FIX: multithreaded operations were failing due to shared
+  :attr:`ExecutionPlan.executed`.
+
++ FIX: prunning sometimes were inserting plan string in DAG.
+  (not ``_DataNode``).
+
++ ENH: heavily reinforced exception annotations ("jetsam"):
+
+  - FIX: (8f3ec3a) outer graphs/ops do not override the inner cause.
+  - ENH: retrofitted exception-annotations as a single dictionary, to print it in one shot
+    (8f3ec3a & 8d0de1f)
+  - enh: more data in a dictionary
+  - TCs: Add thorough TCs (8f3ec3a & b8063e5).
+
++ REFACT: rename `Delete`-->`Evict`, removed `Placeholder` from nadanodes, privatize node-classes.
+
++ ENH: collect "jetsam" on errors and annotate exceptions with them.
+
++ ENH(sideffects): make them always DIFFERENT from regular DATA, to allow to co-exist.
+
++ fix(sideffects): typo in add_op() were mixing needs/provides.
+
++ enh: accept a single string as `outputs` when running graphs.
+
+
+Testing & other code:
+---------------------
++ TCs: `pytest` now checks sphinx-site builds without any warnings.
+
+
+
 v1.3.0 (Oct 2019): New DAG solver, better plotting & "sideffect"
 ================================================================
 
