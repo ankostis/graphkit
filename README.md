@@ -1,24 +1,21 @@
 # Graphtik
 
-[![Supported Python versions of latest release in PyPi](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)
-[![Latest version in PyPI](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)
-[![Latest version in GitHub](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)
-[![Build Status](https://travis-ci.org/pygraphkit/graphtik.svg?branch=master)](https://travis-ci.org/pygraphkit/graphtik)
-[![Doc Status](https://img.shields.io/readthedocs/graphtik.svg?branch=master)](https://graphtik.readthedocs.io/)
-[![codecov](https://codecov.io/gh/pygraphkit/graphtik/branch/master/graph/badge.svg)](https://codecov.io/gh/pygraphkit/graphtik)
-[![License](https://img.shields.io/pypi/l/graphtik.svg)](https://img.shields.io/pypi/l/graphtik.svg)
+![Supported Python versions of latest release in PyPi](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)
+![Latest version in PyPI](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)
+![Latest version in GitHub](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)
+![Build Status](https://travis-ci.org/pygraphkit/graphtik.svg?branch=master)
+![Doc Status](https://img.shields.io/readthedocs/graphtik.svg?branch=master)
+![codecov](https://codecov.io/gh/pygraphkit/graphtik/branch/master/graph/badge.svg)
+![License](https://img.shields.io/pypi/l/graphtik.svg)
 
-[![Github watchers](https://img.shields.io/github/watchers/pygraphkit/graphtik.svg?style=social)](https://img.shields.io/github/watchers/pygraphkit/graphtik.svg?style=social)
-[![Github stargazers](https://img.shields.io/github/stars/pygraphkit/graphtik.svg?style=social)](https://img.shields.io/github/stars/pygraphkit/graphtik.svg?style=social)
-[![Github forks](https://img.shields.io/github/forks/pygraphkit/graphtik.svg?style=social)](https://img.shields.io/github/forks/pygraphkit/graphtik.svg?style=social)
-[![Issues count](http://img.shields.io/github/issues/pygraphkit/graphtik.svg?style=social)](http://img.shields.io/github/issues/pygraphkit/graphtik.svg?style=social)
-
-[Full Documentation](https://pythonhosted.org/graphtik/)
+![Github watchers](https://img.shields.io/github/watchers/pygraphkit/graphtik.svg?style=social)
+![Github stargazers](https://img.shields.io/github/stars/pygraphkit/graphtik.svg?style=social)
+![Github forks](https://img.shields.io/github/forks/pygraphkit/graphtik.svg?style=social)
+![Issues count](http://img.shields.io/github/issues/pygraphkit/graphtik.svg?style=social)
 
 > It's a DAG all the way down
 
-<img src="docs/source/images/barebone_2ops.svg" width=100
- alt="simple graphtik computation">
+<img src="docs/source/images/barebone_2ops.svg" width=100 alt="simple graphtik computation">
 
 ## Lightweight computation graphs for Python
 
