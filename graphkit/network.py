@@ -410,7 +410,7 @@ class Network(plot.Plotter):
 
     def __repr__(self):
         steps = ["\n  +--%s" % s for s in self.graph.nodes]
-        return "Network(nodes:%s)" % "".join(steps)
+        return "Network(%s)" % "".join(steps)
 
     def _build_pydot(self, **kws):
         from .plot import build_pydot
