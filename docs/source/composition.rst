@@ -3,14 +3,14 @@
 Graph Composition
 =================
 
-GraphKit's ``compose`` class handles the work of tying together ``operation`` instances into a runnable computation graph.
+Graphtik's ``compose`` class handles the work of tying together ``operation`` instances into a runnable computation graph.
 
 The ``compose`` class
 ---------------------
 
 For now, here's the specification of ``compose``.  We'll get into how to use it in a second.
 
-.. autoclass:: graphkit.compose
+.. autoclass:: graphtik.compose
    :members: __call__
    :special-members:
 
@@ -23,7 +23,7 @@ Simple composition of operations
 The simplest use case for ``compose`` is assembling a collection of individual operations into a runnable computation graph.  The example script from :ref:`quick-start` illustrates this well::
 
    >>> from operator import mul, sub
-   >>> from graphkit import compose, operation
+   >>> from graphtik import compose, operation
 
    >>> # Computes |a|^p.
    >>> def abspow(a, p):
@@ -69,7 +69,7 @@ For example, if ``graphop`` is as above::
    >>> out
    {'a_minus_ab': -8}
 
-When using ``outputs`` to request only a subset of a graph's outputs, GraphKit executes
+When using ``outputs`` to request only a subset of a graph's outputs, Graphtik executes
 only the ``operation`` nodes in the graph that are on a path from the inputs to the requested outputs.
 For example, the ``abspow1`` operation will not be executed here.
 

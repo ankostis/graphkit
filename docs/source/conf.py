@@ -3,7 +3,7 @@
 
 # -*- coding: utf-8 -*-
 #
-# graphkit documentation build configuration file, created by
+# graphtik documentation build configuration file, created by
 # sphinx-quickstart on Tue Jun 16 19:10:27 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -40,7 +40,8 @@ extensions = [
 ]
 
 extlinks = {
-    'gh': ('https://github.com/yahoo/graphkit/issues/%s', '#'),
+    'gh': ('https://github.com/yahoo/graphtik/issues/%s', '#'),
+    'gg': ('https://github.com/pygraphkit/graphtik/issues/%s', '#'),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -56,7 +57,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'graphkit'
+project = u'graphtik'
 copyright = u'2016, Yahoo Vision and Machine Learning Team: Huy Nguyen, Arel Cordero, Pierre Garrigues, Tobi Baumgartner, Rob Hess'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -186,7 +187,7 @@ html_show_sourcelink = False
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'graphkitdoc'
+htmlhelp_basename = 'graphtikdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -206,7 +207,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'graphkit.tex', u'graphkit Documentation',
+  ('index', 'graphtik.tex', u'graphtik Documentation',
    u'Yahoo Vision and Machine Learning Team: Huy Nguyen, Arel Cordero, Pierre Garrigues, Tobi Baumgartner, Rob Hess', 'manual'),
 ]
 
@@ -236,7 +237,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'graphkit', u'graphkit Documentation',
+    ('index', 'graphtik', u'graphtik Documentation',
      [u'Yahoo Vision and Machine Learning Team: Huy Nguyen, Arel Cordero, Pierre Garrigues, Tobi Baumgartner, Rob Hess'], 1)
 ]
 
@@ -250,8 +251,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'graphkit', u'graphkit Documentation',
-   u'Yahoo Vision and Machine Learning Team: Huy Nguyen, Arel Cordero, Pierre Garrigues, Tobi Baumgartner, Rob Hess', 'graphkit', 'It\'s DAGs all the way down.',
+  ('index', 'graphtik', u'graphtik Documentation',
+   u'Yahoo Vision and Machine Learning Team: Huy Nguyen, Arel Cordero, Pierre Garrigues, Tobi Baumgartner, Rob Hess', 'graphtik', 'It\'s DAGs all the way down.',
    'Miscellaneous'),
 ]
 

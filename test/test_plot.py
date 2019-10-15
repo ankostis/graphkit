@@ -6,8 +6,8 @@ from operator import add
 
 import pytest
 
-from graphkit import base, compose, network, operation, plot
-from graphkit.modifiers import optional
+from graphtik import base, compose, network, operation, plot
+from graphtik.modifiers import optional
 
 
 @pytest.fixture
@@ -163,7 +163,7 @@ def test_plot_matpotlib(pipeline, tmp_path):
     if sys.version_info < (3, 5):
         # On PY< 3.5 it fails with:
         #   nose.proxy.TclError: no display name and no $DISPLAY environment variable
-        # eg https://travis-ci.org/ankostis/graphkit/jobs/593957996
+        # eg https://travis-ci.org/ankostis/graphtik/jobs/593957996
         import matplotlib
 
         matplotlib.use("Agg")

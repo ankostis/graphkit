@@ -1,6 +1,6 @@
 """
 This sub-module contains input/output modifiers that can be applied to
-arguments to ``needs`` and ``provides`` to let GraphKit know it should treat
+arguments to ``needs`` and ``provides`` to let Graphtik know it should treat
 them differently.
 
 Copyright 2016, Yahoo Inc.
@@ -22,7 +22,7 @@ class optional(str):
 
     Here is an example of an operation that uses an optional argument::
 
-        >>> from graphkit import operation, compose, optional
+        >>> from graphtik import operation, compose, optional
 
         >>> # Function that adds either two or three numbers.
         >>> def myadd(a, b, c=0):
@@ -72,7 +72,7 @@ class sideffect(str):
     pandas dataframes::
 
 
-        >>> from graphkit import operation, compose, sideffect
+        >>> from graphtik import operation, compose, sideffect
 
         >>> # Function appending a new dataframe column from two pre-existing ones.
         >>> def addcolumns(df):
@@ -114,7 +114,7 @@ class sideffect(str):
     .. tip::
         You may associate sideffects with other data to convey their relationships,
         simply by including their names in the string - in the end, it's just a string -
-        but no enforcement will happen from *graphkit*.
+        but no enforcement will happen from *graphtik*.
 
         >>> sideffect("price[sales_df]")
         'sideffect(price[sales_df])'

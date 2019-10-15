@@ -12,28 +12,28 @@ with open("README.md") as f:
 
 # Grab the version using convention described by flask
 # https://github.com/pallets/flask/blob/master/setup.py#L10
-with io.open("graphkit/__init__.py", "rt", encoding="utf8") as f:
+with io.open("graphtik/__init__.py", "rt", encoding="utf8") as f:
     version = re.search(r'__version__ = "(.*?)"', f.read()).group(1)
 
 plot_reqs = ["matplotlib", "pydot"]  # to test plot  # to test plot
 test_reqs = plot_reqs + ["pytest", "pytest-cov", "pytest-sphinx"]
 
 setup(
-    name="graphkit",
+    name="graphtik",
     version=version,
     description="Lightweight computation graphs for Python",
     long_description=long_description,
     author="Huy Nguyen, Arel Cordero, Pierre Garrigues, Rob Hess, "
     "Tobi Baumgartner, Clayton Mellina, ankostis@gmail.com",
     author_email="huyng@yahoo-inc.com",
-    url="http://github.com/yahoo/graphkit",
+    url="http://github.com/pygraphkit/graphtik",
     project_urls={
-        "Documentation": "https://pythonhosted.org/graphkit/",
-        "Release Notes": "https://pythonhosted.org/graphkit/changes.html",
-        "Sources": "https://github.com/yahoo/graphkit",
-        "Bug Tracker": "https://github.com/yahoo/graphkit/issues",
+        "Documentation": "https://pythonhosted.org/graphtik/",
+        "Release Notes": "https://pythonhosted.org/graphtik/changes.html",
+        "Sources": "https://github.com/pygraphkit/graphtik",
+        "Bug Tracker": "https://github.com/pygraphkit/graphtik/issues",
     },
-    packages=["graphkit"],
+    packages=["graphtik"],
     install_requires=[
         "networkx; python_version >= '3.5'",
         "networkx == 2.2; python_version < '3.5'",

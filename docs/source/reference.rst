@@ -2,35 +2,35 @@
 API Reference
 =============
 
-Package: `graphkit`
+Package: `graphtik`
 ===================
 
-.. automodule:: graphkit
+.. automodule:: graphtik
 
 Module: `base`
 ==============
 
-.. automodule:: graphkit.base
+.. automodule:: graphtik.base
      :members:
      :undoc-members:
 
 Module: `functional`
 ====================
 
-.. automodule:: graphkit.functional
+.. automodule:: graphtik.functional
      :members:
      :undoc-members:
 
 Module: `network`
 =================
 
-.. automodule:: graphkit.network
+.. automodule:: graphtik.network
      :members:
      :undoc-members:
 
 Module: `plot`
 ==============
 
-.. automodule:: graphkit.plot
+.. automodule:: graphtik.plot
      :members:
      :undoc-members:

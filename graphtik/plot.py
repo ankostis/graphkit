@@ -1,6 +1,6 @@
 # Copyright 2016, Yahoo Inc.
 # Licensed under the terms of the Apache License, Version 2.0. See the LICENSE file associated with the project for terms.
-""" Plotting graphkit graps"""
+""" Plotting graphtik graps"""
 import io
 import logging
 import os
@@ -58,8 +58,8 @@ class Plotter(object):
         its own graph internally;  use directly :func:`render_pydot()` to provide
         a different graph.
 
-        .. image:: images/GraphkitLegend.svg
-            :alt: Graphkit Legend
+        .. image:: images/GraphtikLegend.svg
+            :alt: Graphtik Legend
 
         *NODES:*
 
@@ -103,8 +103,8 @@ class Plotter(object):
 
         **Sample code:**
 
-        >>> from graphkit import compose, operation
-        >>> from graphkit.modifiers import optional
+        >>> from graphtik import compose, operation
+        >>> from graphtik.modifiers import optional
         >>> from operator import add
 
         >>> graphop = compose(name="graphop")(
@@ -388,7 +388,7 @@ def legend(filename=None, show=None):
     digraph {
         rankdir=LR;
         subgraph cluster_legend {
-        label="Graphkit Legend";
+        label="Graphtik Legend";
 
         operation   [shape=oval fontname=italic];
         graphop     [shape=egg label="graph operation" fontname=italic];
@@ -421,7 +421,7 @@ def legend(filename=None, show=None):
     """
 
     dot = pydot.graph_from_dot_data(dot_text)[0]
-    # clus = pydot.Cluster("Graphkit legend", label="Graphkit legend")
+    # clus = pydot.Cluster("Graphtik legend", label="Graphtik legend")
     # dot.add_subgraph(clus)
 
     # nodes = dot.Node()

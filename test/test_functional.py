@@ -3,7 +3,7 @@
 
 import pytest
 
-from graphkit import Operation, operation
+from graphtik import Operation, operation
 
 
 @pytest.fixture(params=[None, ["some"]])

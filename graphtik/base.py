@@ -14,7 +14,7 @@ from . import plot
 log = logging.getLogger(__name__)
 
 
-## def jetsam(ex, locs, *salvage_vars, annotation="graphkit_jetsam", **salvage_mappings):  # bad PY2 syntax
+## def jetsam(ex, locs, *salvage_vars, annotation="graphtik_jetsam", **salvage_mappings):  # bad PY2 syntax
 def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
     """
     Annotate exception with salvaged values from locals().
@@ -43,7 +43,7 @@ def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
         assigned as atrributes on this context-manager
 
     - Any attrributes attached on this manager are attached as a new dict on
-      the raised exception as new  ``graphkit_jetsam`` attrribute with a dict as value.
+      the raised exception as new  ``graphtik_jetsam`` attrribute with a dict as value.
     - If the exception is already annotated, any new items are inserted,
       but existing ones are preserved.
 
@@ -63,7 +63,7 @@ def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
     And then from a REPL::
 
         import sys
-        sys.last_value.graphkit_jetsam
+        sys.last_value.graphtik_jetsam
         {'a': 1, 'salvaged_b': 2, "c_var": None}
 
     ** Reason:**
@@ -79,7 +79,7 @@ def jetsam(ex, locs, *salvage_vars, **salvage_mappings):
     """
     ## Fail EARLY before yielding on bad use.
     #
-    annotation = salvage_mappings.pop("annotation", "graphkit_jetsam")
+    annotation = salvage_mappings.pop("annotation", "graphtik_jetsam")
 
     assert isinstance(ex, Exception), ("Bad `ex`, not an exception dict:", ex)
     assert isinstance(locs, dict), ("Bad `locs`, not a dict:", locs)

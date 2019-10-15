@@ -9,9 +9,9 @@ from pprint import pprint
 
 import pytest
 
-import graphkit.network as network
-from graphkit import Operation, compose, operation, optional, sideffect
-from graphkit.network import _EvictInstruction
+import graphtik.network as network
+from graphtik import Operation, compose, operation, optional, sideffect
+from graphtik.network import _EvictInstruction
 
 
 def scream(*args, **kwargs):
@@ -343,7 +343,7 @@ def test_pruning_multiouts_not_override_intermediates1():
     # FIXED on #26
     assert pipeline(inputs, ["asked"]) == filtdict(exp, "asked")
     # Plan must contain "overriden" step twice, for pin & evict.
-    # Plot it to see, or check https://github.com/huyng/graphkit/pull/1#discussion_r334226396.
+    # Plot it to see, or check https://github.com/huyng/graphtik/pull/1#discussion_r334226396.
     datasteps = [s for s in pipeline.net.last_plan.steps if s == "overriden"]
     assert len(datasteps) == 2
     assert isinstance(datasteps[0], network._PinInstruction)
@@ -371,13 +371,13 @@ def test_pruning_multiouts_not_override_intermediates1():
 @pytest.mark.xfail(
     sys.version_info < (3, 6),
     reason="PY3.5- have unstable dicts."
-    "E.g. https://travis-ci.org/ankostis/graphkit/jobs/595841023",
+    "E.g. https://travis-ci.org/ankostis/graphtik/jobs/595841023",
 )
 def test_pruning_multiouts_not_override_intermediates2():
     # Test #25: v.1.2.4 overrides intermediate data when a previous operation
     # must run for its other outputs (outputs asked or not)
     # SPURIOUS FAILS in < PY3.6 due to unordered dicts,
-    # eg https://travis-ci.org/ankostis/graphkit/jobs/594813119
+    # eg https://travis-ci.org/ankostis/graphtik/jobs/594813119
     pipeline = compose(name="pipeline")(
         operation(name="must run", needs=["a"], provides=["overriden", "e"])(
             lambda x: (x, 2 * x)
@@ -643,7 +643,7 @@ def test_sideffect_real_input(bools):
 @pytest.mark.xfail(
     sys.version_info < (3, 6),
     reason="PY3.5- have unstable dicts."
-    "E.g. https://travis-ci.org/ankostis/graphkit/jobs/595793872",
+    "E.g. https://travis-ci.org/ankostis/graphtik/jobs/595793872",
 )
 def test_optional_per_function_with_same_output():
     # Test that the same need can be both optional and not on different operations.
@@ -778,9 +778,9 @@ def test_evict_instructions_vary_with_inputs():
 
 
 def test_multithreading_plan_execution():
-    # From Huygn's test-code given in yahoo/graphkit#31
+    # From Huygn's test-code given in yahoo/graphtik#31
     from multiprocessing.dummy import Pool
-    from graphkit import compose, operation
+    from graphtik import compose, operation
 
     # Compose the mul, sub, and abspow operations into a computation graph.
     graph = compose(name="graph")(

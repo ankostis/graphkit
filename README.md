@@ -1,48 +1,53 @@
-# GraphKit
+# Graphtik
 
-[![Latest version in PyPI](https://img.shields.io/pypi/v/graphkit.svg?label=PyPi%20version)](https://img.shields.io/pypi/v/graphkit.svg?label=PyPi%20version)
-[![Latest version in GitHub](https://img.shields.io/github/v/release/yahoo/graphkit.svg?label=GitHub%20release&include_prereleases)](https://img.shields.io/github/v/release/yahoo/graphkit.svg?label=GitHub%20release&include_prereleases)
-[![Supported Python versions of latest release in PyPi](https://img.shields.io/pypi/pyversions/graphkit.svg?label=Python)](https://img.shields.io/pypi/pyversions/graphkit.svg?label=Python)
-[![Build Status](https://travis-ci.org/yahoo/graphkit.svg?branch=master)](https://travis-ci.org/yahoo/graphkit)
-[![codecov](https://codecov.io/gh/yahoo/graphkit/branch/master/graph/badge.svg)](https://codecov.io/gh/yahoo/graphkit)
-[![License](https://img.shields.io/pypi/l/graphkit.svg)](https://img.shields.io/pypi/l/graphkit.svg)
+[![Latest version in PyPI](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)](https://img.shields.io/pypi/v/graphtik.svg?label=PyPi%20version)
+[![Latest version in GitHub](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)](https://img.shields.io/github/v/release/pygraphkit/graphtik.svg?label=GitHub%20release&include_prereleases)
+[![Supported Python versions of latest release in PyPi](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)](https://img.shields.io/pypi/pyversions/graphtik.svg?label=Python)
+[![Build Status](https://travis-ci.org/pygraphkit/graphtik.svg?branch=master)](https://travis-ci.org/pygraphkit/graphtik)
+[![Doc Status](https://readthedocs.org/projects/graphtik/badge.svg?branch=master)](https://graphtik.readthedocs.io/)
+[![codecov](https://codecov.io/gh/pygraphkit/graphtik/branch/master/graph/badge.svg)](https://codecov.io/gh/pygraphkit/graphtik)
+[![License](https://img.shields.io/pypi/l/graphtik.svg)](https://img.shields.io/pypi/l/graphtik.svg)
 
-[![Github watchers](https://img.shields.io/github/watchers/yahoo/graphkit.svg?style=social)](https://img.shields.io/github/watchers/yahoo/graphkit.svg?style=social)
-[![Github stargazers](https://img.shields.io/github/stars/yahoo/graphkit.svg?style=social)](https://img.shields.io/github/stars/yahoo/graphkit.svg?style=social)
-[![Github forks](https://img.shields.io/github/forks/yahoo/graphkit.svg?style=social)](https://img.shields.io/github/forks/yahoo/graphkit.svg?style=social)
-[![Issues count](http://img.shields.io/github/issues/yahoo/graphkit.svg?style=social)](http://img.shields.io/github/issues/yahoo/graphkit.svg?style=social)
+[![Github watchers](https://img.shields.io/github/watchers/pygraphkit/graphtik.svg?style=social)](https://img.shields.io/github/watchers/pygraphkit/graphtik.svg?style=social)
+[![Github stargazers](https://img.shields.io/github/stars/pygraphkit/graphtik.svg?style=social)](https://img.shields.io/github/stars/pygraphkit/graphtik.svg?style=social)
+[![Github forks](https://img.shields.io/github/forks/pygraphkit/graphtik.svg?style=social)](https://img.shields.io/github/forks/pygraphkit/graphtik.svg?style=social)
+[![Issues count](http://img.shields.io/github/issues/pygraphkit/graphtik.svg?style=social)](http://img.shields.io/github/issues/pygraphkit/graphtik.svg?style=social)
 
-[Full Documentation](https://pythonhosted.org/graphkit/)
+[Full Documentation](https://pythonhosted.org/graphtik/)
 
 > It's a DAG all the way down
 
 <img src="docs/source/images/barebone_2ops.svg" width=100
- alt="simple graphkit computation">
+ alt="simple graphtik computation">
 
 ## Lightweight computation graphs for Python
 
-GraphKit is an an understandable and lightweight Python module for building and running
+**Graphtik** is an an understandable and lightweight Python module for building and running
 ordered graphs of computations.
 The API posits a fair compromise between features and complexity without precluding any.
 It might be of use in computer vision, machine learning and other data science domains,
 or become the core of a custom ETL pipelne.
 
+*Graphtik* is a temporary fork of [*Graphkit*](https://github.com/yahoo/graphkit)
+to experiment with Python 3.6+ features.
+
+
 ## Quick start
 
 Here's how to install:
 
-    pip install graphkit
+    pip install graphtik
 
 OR with dependencies for plotting support (and you need to install [`Graphviz`](https://graphviz.org)
 program separately with your OS tools):
 
-    pip install graphkit[plot]
+    pip install graphtik[plot]
 
-Here's a Python script with an example GraphKit computation graph that produces
+Here's a Python script with an example Graphtik computation graph that produces
 multiple outputs (`a * b`, `a - a * b`, and `abs(a - a * b) ** 3`):
 
     >>> from operator import mul, sub
-    >>> from graphkit import compose, operation
+    >>> from graphtik import compose, operation
 
     >>> # Computes |a|^p.
     >>> def abspow(a, p):
@@ -57,7 +62,7 @@ multiple outputs (`a * b`, `a - a * b`, and `abs(a - a * b) ** 3`):
     ... )
 
 <img src="docs/source/images/barebone_3ops.svg" width=100
-alt="simple graphkit computation">
+alt="simple graphtik computation">
 
     >>> # Run the graph and request all of the outputs.
     >>> out = graphop({'a': 2, 'b': 5})
@@ -70,9 +75,9 @@ alt="simple graphkit computation">
     {'a_minus_ab': -8}
 
 <img src="docs/source/images/executed_3ops.svg" width=120
- alt="simple graphkit computation">
+ alt="simple graphtik computation">
 
-As you can see, any function can be used as an operation in GraphKit, even ones imported from system modules!
+As you can see, any function can be used as an operation in Graphtik, even ones imported from system modules!
 
 
 ## Plotting
@@ -87,7 +92,7 @@ graphop.plot()                         # without arguments return a pydot.DOT ob
 graphop.plot(solution=out)             # annotate graph with solution values
 ```
 
-![Graphkit Legend](docs/source/images/GraphkitLegend.svg "Graphkit Legend")
+![Graphtik Legend](docs/source/images/GraphtikLegend.svg "Graphtik Legend")
 
 > **TIP:** The `pydot.Dot` instances returned by `plot()` are rendered as SVG in *Jupyter/IPython*.
 

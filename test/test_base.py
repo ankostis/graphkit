@@ -6,7 +6,7 @@ import logging
 
 import pytest
 
-from graphkit import base, network, operation
+from graphtik import base, network, operation
 
 
 @pytest.mark.parametrize("locs", [None, (), [], [0], "bad"])
@@ -18,7 +18,7 @@ def test_jetsam_bad_locals(locs, caplog):
         except Exception as ex:
             base.jetsam(ex, locs, a="a")
 
-    assert not hasattr(excinfo.value, "graphkit_jetsam")
+    assert not hasattr(excinfo.value, "graphtik_jetsam")
     assert "Supressed error while annotating exception" not in caplog.text
 
 
@@ -31,7 +31,7 @@ def test_jetsam_bad_keys(keys, caplog):
         except Exception as ex:
             base.jetsam(ex, {}, **keys)
 
-    assert not hasattr(excinfo.value, "graphkit_jetsam")
+    assert not hasattr(excinfo.value, "graphtik_jetsam")
     assert "Supressed error while annotating exception" not in caplog.text
 
 
@@ -44,7 +44,7 @@ def test_jetsam_bad_locals_given(locs, caplog):
         except Exception as ex:
             base.jetsam(ex, locs, a="a")
 
-    assert not hasattr(excinfo.value, "graphkit_jetsam")
+    assert not hasattr(excinfo.value, "graphtik_jetsam")
     assert "Supressed error while annotating exception" not in caplog.text
 
 
@@ -54,12 +54,12 @@ def test_jetsam_bad_existing_annotation(annotation, caplog):
     with pytest.raises(Exception, match="ABC") as excinfo:
         try:
             ex = Exception("ABC")
-            ex.graphkit_jetsam = annotation
+            ex.graphtik_jetsam = annotation
             raise ex
         except Exception as ex:
             base.jetsam(ex, {}, a="a")
 
-    assert excinfo.value.graphkit_jetsam == {"a": None}
+    assert excinfo.value.graphtik_jetsam == {"a": None}
     assert "Supressed error while annotating exception" not in caplog.text
 
 
@@ -70,8 +70,8 @@ def test_jetsam_dummy_locals(caplog):
         except Exception as ex:
             base.jetsam(ex, {"a": 1}, a="a", bad="bad")
 
-    assert isinstance(excinfo.value.graphkit_jetsam, dict)
-    assert excinfo.value.graphkit_jetsam == {"a": 1, "bad": None}
+    assert isinstance(excinfo.value.graphtik_jetsam, dict)
+    assert excinfo.value.graphtik_jetsam == {"a": 1, "bad": None}
     assert "Supressed error" not in caplog.text
 
 
@@ -92,7 +92,7 @@ def _jetsamed_fn(*args, **kwargs):
 def test_jetsam_locals_simple(caplog):
     with pytest.raises(Exception, match="ABC") as excinfo:
         _jetsamed_fn()
-    assert excinfo.value.graphkit_jetsam == {"a": 1, "b": 2}
+    assert excinfo.value.graphtik_jetsam == {"a": 1, "b": 2}
     assert "Supressed error" not in caplog.text
 
 
@@ -117,7 +117,7 @@ def test_jetsam_nested():
     with pytest.raises(Exception, match="ABC") as excinfo:
         outer()
 
-    assert excinfo.value.graphkit_jetsam == {"fn": "inner", "a": 1, "b": 2}
+    assert excinfo.value.graphtik_jetsam == {"fn": "inner", "a": 1, "b": 2}
 
 
 def screaming_dumy_op():
@@ -156,7 +156,7 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
         acallable()
 
     ex = excinfo.value
-    assert set(ex.graphkit_jetsam.keys()) == set(expected_jetsam)
+    assert set(ex.graphtik_jetsam.keys()) == set(expected_jetsam)
 
 
 @pytest.mark.parametrize(
@@ -190,4 +190,4 @@ def test_jetsam_sites_scream(acallable, expected_jetsam):
         acallable()
 
     ex = excinfo.value
-    assert set(ex.graphkit_jetsam.keys()) == set(expected_jetsam)
+    assert set(ex.graphtik_jetsam.keys()) == set(expected_jetsam)
