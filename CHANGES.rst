@@ -8,7 +8,7 @@ TODO
 + [ ] typo(test): overriden-->overriDDen
 
 
-v2.0.0b0 (15 Oct 2019): Rebranded as *Graphtik* for Pythos 3.6+
+v2.0.0b1 (15 Oct 2019): Rebranded as *Graphtik* for Pythos 3.6+
 ===============================================================
 Continuation of :gh:`30` as :gh:`31`, containing review-fixes in huyng/graphkit#1.
 
@@ -42,6 +42,12 @@ Network
 Testing & other code:
 ---------------------
 + TCs: `pytest` now checks sphinx-site builds without any warnings.
+
++ Established chores with build services:
+
+  + Travis (and auto-deploy to PyPi),
+  + codecov
+  + ReadTheDocs
 
 
 
@@ -140,7 +146,6 @@ Testing & other code:
 
   .. tip::
     You need ``pytest -m slow`` to run those slow tests.
-
 
 
 Chore & Docs:
