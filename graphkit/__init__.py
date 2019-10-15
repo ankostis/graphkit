@@ -14,4 +14,4 @@ from .modifiers import *  # noqa, on purpose to include any new modifiers
 
 # For backwards compatibility
 from .base import Operation
-from .network import Network
+from .network import Network, Solution

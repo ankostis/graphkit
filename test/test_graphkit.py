@@ -10,7 +10,8 @@ from pprint import pprint
 import pytest
 
 import graphkit.network as network
-from graphkit import Operation, compose, operation, optional, sideffect
+from graphkit import (Operation, Solution, compose, operation, optional,
+                      sideffect)
 from graphkit.network import _EvictInstruction
 
 
@@ -295,28 +296,24 @@ def test_pruning_not_overrides_given_intermediate():
 
     ## Test OVERWITES
     #
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline(inputs, ["asked"]) == filtdict(exp, "asked")
-    assert overwrites == {}  # unjust must have been pruned
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol, ["asked"]) == filtdict(exp, "asked")
+    assert sol.overwrites == {}  # unjust must have been pruned
 
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline(inputs) == exp
-    assert overwrites == {}  # unjust must have been pruned
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol) == exp
+    assert sol.overwrites == {}  # unjust must have been pruned
 
     ## Test Parallel
     #
     pipeline.set_execution_method("parallel")
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    # assert pipeline(inputs, ["asked"]) == filtdict(exp, "asked")
-    assert overwrites == {}  # unjust must have been pruned
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol, ["asked"]) == filtdict(exp, "asked")
+    assert sol.overwrites == {}  # unjust must have been pruned
 
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline(inputs) == exp
-    assert overwrites == {}  # unjust must have been pruned
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol) == exp
+    assert sol.overwrites == {}  # unjust must have been pruned
 
 
 def test_pruning_multiouts_not_override_intermediates1():
@@ -350,15 +347,13 @@ def test_pruning_multiouts_not_override_intermediates1():
 
     ## Test OVERWITES
     #
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline({"a": 5, "overriden": 1}) == exp
-    assert overwrites == {"overriden": 5}
+    sol = Solution({"a": 5, "overriden": 1}, collect_overwrites=True)
+    assert pipeline(sol) == exp
+    assert sol.overwrites == {"overriden": 5}
 
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline(inputs, ["asked"]) == filtdict(exp, "asked")
-    assert overwrites == {"overriden": 5}
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol, ["asked"]) == filtdict(exp, "asked")
+    assert sol.overwrites == {"overriden": 5}
 
     ## Test parallel
     #
@@ -400,15 +395,13 @@ def test_pruning_multiouts_not_override_intermediates2():
 
     ## Test OVERWITES
     #
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline(inputs) == exp
-    assert overwrites == {"overriden": 5}
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol) == exp
+    assert sol.overwrites == {"overriden": 5}
 
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline(inputs, ["asked"]) == filtdict(exp, "asked")
-    assert overwrites == {"overriden": 5}
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol, ["asked"]) == filtdict(exp, "asked")
+    assert sol.overwrites == {"overriden": 5}
 
     ## Test parallel
     #
@@ -426,37 +419,36 @@ def test_pruning_with_given_intermediate_and_asked_out():
         operation(name="good_op", needs=["a", "given-2"], provides=["asked"])(add),
     )
 
+    inputs = {"given-1": 5, "b": 2, "given-2": 2}
     exp = {"given-1": 5, "b": 2, "given-2": 2, "a": 5, "asked": 7}
     # v1.2.4 is ok
-    assert pipeline({"given-1": 5, "b": 2, "given-2": 2}) == exp
+    assert pipeline(inputs) == exp
     # FAILS
     # - on v1.2.4 with KeyError: 'a',
     # - on #18 (unsatisfied) with no result.
     # FIXED on #18+#26 (new dag solver).
-    assert pipeline({"given-1": 5, "b": 2, "given-2": 2}, ["asked"]) == filtdict(
+    assert pipeline(inputs, ["asked"]) == filtdict(
         exp, "asked"
     )
 
     ## Test OVERWITES
     #
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline({"given-1": 5, "b": 2, "given-2": 2}) == exp
-    assert overwrites == {}
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol) == exp
+    assert sol.overwrites == {}
 
-    overwrites = {}
-    pipeline.set_overwrites_collector(overwrites)
-    assert pipeline({"given-1": 5, "b": 2, "given-2": 2}, ["asked"]) == filtdict(
+    sol = Solution(inputs, collect_overwrites=True)
+    assert pipeline(sol, ["asked"]) == filtdict(
         exp, "asked"
     )
-    assert overwrites == {}
+    assert sol.overwrites == {}
 
     ## Test parallel
     #  FAIL! in #26!
     #
     pipeline.set_execution_method("parallel")
-    assert pipeline({"given-1": 5, "b": 2, "given-2": 2}) == exp
-    assert pipeline({"given-1": 5, "b": 2, "given-2": 2}, ["asked"]) == filtdict(
+    assert pipeline(inputs) == exp
+    assert pipeline(inputs, ["asked"]) == filtdict(
         exp, "asked"
     )
 

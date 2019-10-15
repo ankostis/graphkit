@@ -6,7 +6,7 @@ import logging
 
 import pytest
 
-from graphkit import base, network, operation
+from graphkit import base, network, operation, Solution
 
 
 @pytest.mark.parametrize("locs", [None, (), [], [0], "bad"])
@@ -143,7 +143,7 @@ def screaming_dumy_op():
             fnt.partial(
                 network.ExecutionPlan(*([None] * 7))._call_operation,
                 op=screaming_dumy_op(),
-                solution={},
+                values={},
             ),
             ["plan"],
         ),
@@ -165,7 +165,7 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
         # NO old-stuff Operation(fn=_jetsamed_fn, name="test", needs="['a']", provides=[]),
         (
             fnt.partial(
-                operation(name="test", needs=["a"], provides=["b"])(_scream)._compute,
+                operation(name="test", needs=["a"], provides=["b"])(lambda: None)._compute,
                 named_inputs=None,
             ),
             "outputs provides results operation args".split(),
@@ -174,12 +174,12 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
             fnt.partial(
                 network.ExecutionPlan(*([None] * 7))._call_operation,
                 op=None,
-                solution={},
+                values={},
             ),
             ["plan"],
         ),
         (
-            fnt.partial(network.Network().compute, named_inputs=None, outputs=None),
+            fnt.partial(network.Network().compute, solution=None, outputs=None),
             "network plan solution outputs".split(),
         ),
     ],

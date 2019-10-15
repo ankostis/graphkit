@@ -8,13 +8,14 @@ The execution of network *operations* is splitted in 2 phases:
 COMPILE:
     prune unsatisfied nodes, sort dag topologically & solve it, and
     derive the *execution steps* (see below) based on the given *inputs*
-    and asked *outputs*.
+    and asked *outputs*, packaged in a new (or cached) :class:`ExecutionPlan`.
 
 EXECUTE:
-    sequential or parallel invocation of the underlying functions
-    of the operations with arguments from the ``solution``.
+    The *execution-plan* invokes sequentially or parallel the underlying functions
+    of the operations with arguments, the *input-values*, the *asked-outputs* (if any)
+    and the :class:`Solution` to write results.
 
-Computations are based on 5 data-structures:
+Computations are based on these data-structures:
 
 :attr:`Network.graph`
     A ``networkx`` graph (yet a DAG) containing interchanging layers of
@@ -52,17 +53,20 @@ Computations are based on 5 data-structures:
         inputs, and still allow their providing operations to run
         (because they are needed for their other outputs).
 
-:var solution:
-    a local-var in :meth:`~Network.compute()`, initialized on each run
-    to hold the values of the given inputs, generated (intermediate) data,
-    and output values.
-    It is returned as is if no specific outputs requested;  no data-eviction
-    happens then.
+:class:`Solution`:
+    A solution instance is either given externally to :meth:`~Network.compute()`
+     on each run, or initialized as a new local-var if none given.
 
-:arg overwrites:
-    The optional argument given to :meth:`~Network.compute()` to colect the
-    intermediate *calculated* values that are overwritten by intermediate
-    (aka "pinned") input-values.
+
+    - :attr:`values`:
+      a dict holding the given inputs, the generated (intermediate) data,
+      and output values.
+      Eviction applies on these values (only if specific outputs asked).
+
+    - :attr:`Solution.overwrites`:
+      an optional dictionary to collect the intermediate *calculated* values
+      that are overwritten by intermediate (aka "pinned") input-values.
+
 """
 import logging
 import os
@@ -108,10 +112,10 @@ class _DataNode(str):
 
 class _EvictInstruction(str):
     """
-    Execution step to evict a computed value from the `solution`.
+    Execution step to evict a computed value from the solution.
 
     It's a step in :attr:`ExecutionPlan.steps` for the data-node `str` that
-    frees its data-value from `solution` after it is no longer needed,
+    frees its data-value from :attr:``Solution:values` after it is no longer needed,
     to reduce memory footprint while computing the graph.
     """
 
@@ -121,10 +125,9 @@ class _EvictInstruction(str):
 
 class _PinInstruction(str):
     """
-    Execution step to overwrite a computed value in the `solution` from the inputs,
+    Execution step to overwrite a computed value in :attr:`Solution.values` from the inputs,
 
-    and to store the computed one in the ``overwrites`` instead
-    (both `solution` & ``overwrites`` are local-vars in :meth:`~Network.compute()`).
+    and to store the computed one in the :attr:`Solution.overwrites` instead.
 
     It's a step in :attr:`ExecutionPlan.steps` for the data-node `str` that
     ensures the corresponding intermediate input-value is not overwritten when
@@ -136,9 +139,42 @@ class _PinInstruction(str):
         return 'PinInstruction("%s")' % self
 
 
-# TODO: maybe class Solution(object):
-#     values = {}
-#     overwrites = None
+# class Solution(namedtuple("_ExePlan", "values overwrites _executed"):
+class Solution(object):
+    #: The computed named values which MUST contain the given input-values.
+    values = None
+    #: If set to a mutable dict, it will collect the overwrites.
+    #:
+    #: An "overwrites" is intermediate value calculated but NOT stored
+    #: into the results, becaues it has been given also as an intemediate
+    #: input value, and the operation that would overwrite it MUST run for
+    #: its other results.
+    overwrites = None
+
+    #: An empty set to collect all operations that have been executed so far.
+    _executed = None
+
+    def __init__(self, values, collect_overwrites=None):
+        self.values = values
+        if collect_overwrites:
+            self.overwrites = {}
+        self._executed = set()
+
+        self.validate()
+
+    def validate(self):
+        if not isinstance(self.values, dict):
+            raise ValueError("Bad solution `values`, not a dcit, was %s" % self.values)
+        if not self.values:
+            # Save users early from forgetting the inputs.
+            raise ValueError("No input-values in new solution!")
+        if self._executed:
+            raise ValueError(
+                "Cannot reuse solutions!  Already run for: %s" % self._executed
+            )
+
+    def __repr__(self):
+        return "Solution(%s, %s)" % (self.values, self.overwrites or "")
 
 
 class ExecutionPlan(
@@ -236,7 +272,7 @@ class ExecutionPlan(
 
     def _can_evict_value(self, name):
         """
-        Determines if a _DataNode is ready to be evicted from solution.
+        Determines if a data-node is ready to be evicted from solution.
 
         :param name:
             The name of the data node to check
@@ -250,22 +286,22 @@ class ExecutionPlan(
             self.executed
         )
 
-    def _pin_data_in_solution(self, value_name, solution, inputs, overwrites):
+    def _pin_data_in_solution(self, value_name, inputs, solution):
         value_name = str(value_name)
-        if overwrites is not None:
-            overwrites[value_name] = solution[value_name]
-        solution[value_name] = inputs[value_name]
+        if solution.overwrites is not None:
+            solution.overwrites[value_name] = solution.values[value_name]
+        solution.values[value_name] = inputs[value_name]
 
-    def _call_operation(self, op, solution):
+    def _call_operation(self, op, values):
         # Although `plan` have added to jetsam in `compute()``,
         # add it again, in case compile()/execute is called separately.
         try:
-            return op._compute(solution)
+            return op._compute(values)
         except Exception as ex:
             jetsam(ex, locals(), plan="self")
 
     def _execute_thread_pool_barrier_method(
-        self, inputs, solution, overwrites, thread_pool_size=10
+        self, inputs, solution, thread_pool_size=10
     ):
         """
         This method runs the graph using a parallel pool of thread executors.
@@ -278,6 +314,8 @@ class ExecutionPlan(
         if not hasattr(self.net, "_thread_pool"):
             self.net._thread_pool = Pool(thread_pool_size)
         pool = self.net._thread_pool
+
+        values = solution.values
 
         # with each loop iteration, we determine a set of operations that can be
         # scheduled, then schedule them onto a thread pool, then collect their
@@ -298,33 +336,34 @@ class ExecutionPlan(
                     # Only evict if all successors for the data node
                     # have been executed.
                     # An optional need may not have a value in the solution.
-                    if node in solution and self._can_evict_value(node):
+                    if node in values and self._can_evict_value(node):
                         log.debug("removing data '%s' from solution.", node)
-                        del solution[node]
+                        del values[node]
                 elif isinstance(node, _PinInstruction):
                     # Always and repeatedely pin the value, even if not all
                     # providers of the data have executed.
                     # An optional need may not have a value in the solution.
-                    if node in solution:
-                        self._pin_data_in_solution(node, solution, inputs, overwrites)
+                    if node in values:
+                        self._pin_data_in_solution(node, inputs, solution)
 
             # stop if no nodes left to schedule, exit out of the loop
             if len(upnext) == 0:
                 break
 
-            ## TODO: accept pool from caller
+            ## TODO: accept a pool externally from caller.
             done_iterator = pool.imap_unordered(
-                (lambda op: (op, self._call_operation(op, solution))), upnext
+                (lambda op: (op, self._call_operation(op, values))), upnext
             )
 
             for op, result in done_iterator:
-                solution.update(result)
+                values.update(result)
                 self.executed.add(op)
 
-    def _execute_sequential_method(self, inputs, solution, overwrites):
+    def _execute_sequential_method(self, inputs, solution):
         """
         This method runs the graph one operation at a time in a single thread
         """
+        values = solution.values
         self.times = {}
         for step in self.steps:
 
@@ -336,10 +375,10 @@ class ExecutionPlan(
                 t0 = time.time()
 
                 # compute layer outputs
-                layer_outputs = self._call_operation(step, solution)
+                layer_outputs = self._call_operation(step, values)
 
                 # add outputs to solution
-                solution.update(layer_outputs)
+                values.update(layer_outputs)
                 self.executed.add(step)
 
                 # record execution time
@@ -349,26 +388,27 @@ class ExecutionPlan(
 
             elif isinstance(step, _EvictInstruction):
                 # Cache value may be missing if it is optional.
-                if step in solution:
+                if step in values:
                     log.debug("removing data '%s' from solution.", step)
-                    del solution[step]
+                    del values[step]
 
             elif isinstance(step, _PinInstruction):
-                self._pin_data_in_solution(step, solution, inputs, overwrites)
+                self._pin_data_in_solution(step, inputs, solution)
             else:
                 raise AssertionError("Unrecognized instruction.%r" % step)
 
-    def execute(self, solution, overwrites=None, method=None):
+    def execute(self, solution, method=None):
         """
         :param solution:
-            a mutable maping to collect the results and that must contain also
-            the given input values for at least the compulsory inputs that
-            were specified when the plan was built (but cannot enforce that!).
+            a :class:`Solution` instance with these attributes:
 
-        :param overwrites:
-            (optional) a mutable dict to collect calculated-but-discarded values
-            because they were "pinned" by input vaules.
-            If missing, the overwrites values are simply discarded.
+            - `values` containing alrady the given input values for at least
+              all the compulsory inputs that were specified when the plan was built
+              (but cannot enforce that!).
+
+            - `overwrites` an (optional) a mutable dict to collect calculated-but-discarded
+              values because they were "pinned" by input vaules. If missing,
+              the overwrites values are simply discarded.
         """
         # Clean executed operation from any previous execution.
         self.executed.clear()
@@ -381,9 +421,9 @@ class ExecutionPlan(
         )
 
         # clone and keep orignal inputs in solution intact
-        executor(dict(solution), solution, overwrites)
+        executor(dict(solution.values), solution)
 
-        # return it, but caller can also see the results in `solution` dict.
+        # return it, but caller can also see the results in `solution.values` dict.
         return solution
 
 
@@ -553,7 +593,7 @@ class Network(plot.Plotter):
         broken_dag.remove_edges_from(broken_edges)
 
         # Drop stray input values and operations (if any).
-        broken_dag.remove_nodes_from(nx.isolates(broken_dag))
+        broken_dag.remove_nodes_from(list(nx.isolates(broken_dag)))
 
         if outputs:
             # If caller requested specific outputs, we can prune any
@@ -691,15 +731,24 @@ class Network(plot.Plotter):
 
         return plan
 
-    def compute(self, named_inputs, outputs, method=None, overwrites_collector=None):
+    def compute(self, named_inputs: dict, outputs, method=None):
         """
         Solve & execute the graph, sequentially or parallel.
 
-        :param dict named_inputs:
-            A dict of key/value pairs where the keys represent the data nodes
-            you want to populate, and the values are the concrete values you
-            want to set for the data node.
+        :param named_inputs:
+            one of:
 
+            - a dict of key/value pairs where the keys represent
+              the data nodes you want to populate, and the values are
+              the concrete values you want to set for the data node, or
+            - a :class:`Solution` instance which MUST contai the inputs values,
+              and will collect calculated values, and (optionally) `overwrites`.
+
+
+            You may collect `overwrites` only if you pass a solution instance with
+            a mutable dict set in :attr:`Solution.overwrites`.
+
+            In any case, the inputs dictionary is cloned.
         :param outputs:
             a string or a list of strings with all data asked to compute.
             If you set this variable to ``None``, all data nodes will be kept
@@ -709,10 +758,6 @@ class Network(plot.Plotter):
             if ``"parallel"``, launches multi-threading.
             Set when invoking a composed graph or by
             :meth:`~NetworkOperation.set_execution_method()`.
-
-        :param overwrites_collector:
-            (optional) a mutable dict to be fillwed with named values.
-            If missing, values are simply discarded.
 
         :returns: a dictionary of output data objects, keyed by name.
         """
@@ -724,21 +769,33 @@ class Network(plot.Plotter):
                     "The outputs argument must be a list, was: %s", outputs
                 )
 
+            ## start with fresh data solution or use given one,
+            # ensuring they contain inputs.
+            #
+            if not named_inputs:
+                raise ValueError(
+                    "No inputs/solution given to compute, was: %s" % named_inputs
+                )
+            elif isinstance(named_inputs, Solution):
+                solution = named_inputs
+                solution.validate()
+            else:
+                solution = Solution(values=dict(named_inputs))
+
             # Build the execution plan.
-            self.last_plan = plan = self.compile(named_inputs.keys(), outputs)
+            self.last_plan = plan = self.compile(solution.values.keys(), outputs)
 
-            # start with fresh data solution.
-            solution = dict(named_inputs)
-
-            plan.execute(solution, overwrites_collector, method)
+            plan.execute(solution, method)
 
             if outputs:
                 # Filter outputs to just return what's requested.
                 # Otherwise, return the whole solution as output,
                 # including input and intermediate data nodes.
                 # Still needed with eviction to clean isolated given inputs.
-                solution = dict(i for i in solution.items() if i[0] in outputs)
+                solution.values = dict(
+                    i for i in solution.values.items() if i[0] in outputs
+                )
 
-            return solution
+            return solution.values
         except Exception as ex:
             jetsam(ex, locals(), "plan", "solution", "outputs", network="self")

@@ -291,7 +291,6 @@ class NetworkOperation(Operation, plot.Plotter):
 
         # set execution mode to single-threaded sequential by default
         self._execution_method = "sequential"
-        self._overwrites_collector = None
 
     def _build_pydot(self, **kws):
         """delegate to network"""
@@ -300,12 +299,7 @@ class NetworkOperation(Operation, plot.Plotter):
         return plotter._build_pydot(**kws)
 
     def _compute(self, named_inputs, outputs=None):
-        return self.net.compute(
-            named_inputs,
-            outputs,
-            method=self._execution_method,
-            overwrites_collector=self._overwrites_collector,
-        )
+        return self.net.compute(named_inputs, outputs, method=self._execution_method)
 
     def __call__(self, *args, **kwargs):
         return self._compute(*args, **kwargs)
@@ -327,24 +321,6 @@ class NetworkOperation(Operation, plot.Plotter):
                 "Invalid computation method %r!  Must be one of %s" % (method, choices)
             )
         self._execution_method = method
-
-    def set_overwrites_collector(self, collector):
-        """
-        Asks to put all *overwrites* into the `collector` after computing
-
-        An "overwrites" is intermediate value calculated but NOT stored
-        into the results, becaues it has been given also as an intemediate
-        input value, and the operation that would overwrite it MUST run for
-        its other results.
-
-        :param collector:
-            a mutable dict to be fillwed with named values
-        """
-        if collector is not None and not isinstance(collector, abc.MutableMapping):
-            raise ValueError(
-                "Overwrites collector was not a MutableMapping, but: %r" % collector
-            )
-        self._overwrites_collector = collector
 
     def __getstate__(self):
         state = Operation.__getstate__(self)
