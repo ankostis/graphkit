@@ -212,6 +212,23 @@ def build_pydot(
                 )
             node_cluster.add_node(node)
 
+    def append_edge_or_inc_cardinality(dot, edge):
+        old = dot.get_edge(edge.get_source(), edge.get_destination())
+        breakpoint()
+        if old:
+            label = edge.get_label()
+            cardinality = (
+                # parse "x3" as int
+                int(label[1:]) + 1
+                if label
+                else
+                # first dupe
+                2
+            )
+            edge.set_label(f"x{cardinality}")
+        else:
+            dot.add_edge(edge)
+
     def append_any_clusters(dot):
         for cluster in new_clusters.values():
             dot.add_subgraph(cluster)
@@ -289,7 +306,7 @@ def build_pydot(
 
         _apply_user_props(edge, edge_props, key=(src, dst))
 
-        dot.add_edge(edge)
+        append_edge_or_inc_cardinality(dot, edge)
 
     _report_unmatched_user_props(edge_props, "edge")
 

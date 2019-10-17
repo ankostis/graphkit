@@ -188,3 +188,10 @@ def test_plot_legend(pipeline, tmp_path):
 
     img = plot.legend(show=-1)
     _check_plt_img(img)
+
+def test_plot_dupe_edges():
+    netop = compose(name="netop")(
+        operation(name="add", needs=["a", "a"], provides=["2a"])(add),
+    )
+    dot = netop.plot()
+    assert 'x2' in str(dot)
