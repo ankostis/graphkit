@@ -34,6 +34,7 @@ setup(
         "Bug Tracker": "https://github.com/pygraphkit/graphtik/issues",
     },
     packages=["graphtik"],
+    python_requires='>=3.6',
     install_requires=[
         "networkx; python_version >= '3.5'",
         "networkx == 2.2; python_version < '3.5'",
