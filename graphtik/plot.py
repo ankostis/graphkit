@@ -3,8 +3,10 @@
 """ Plotting graphtik graps"""
 import inspect
 import io
+import json
 import logging
 import os
+import textwrap
 from typing import Any, Callable, Mapping, Optional, Tuple, Union
 
 import pydot
@@ -42,8 +44,6 @@ default_jupyter_render = {
 
 
 def _parse_jupyter_render(dot) -> Tuple[str, str, str]:
-    import json
-
     jupy_cfg: Mapping[str, Any] = getattr(dot, "_jupyter_render", None)
     if jupy_cfg is None:
         jupy_cfg = default_jupyter_render
@@ -113,6 +113,9 @@ def _monkey_patch_for_jupyter(pydot):
         pydot.Dot._repr_html_ = _dot2svg
 
 
+_monkey_patch_for_jupyter(pydot)
+
+
 def _is_class_value_in_list(lst, cls, value):
     return any(isinstance(i, cls) and i == value for i in lst)
 
@@ -146,7 +149,8 @@ def build_pydot(
     node_props=None,
     edge_props=None,
     clusters=None,
-):
+    legend=None,
+) -> pydot.Dot:
     """
     Build a *Graphviz* out of a Network graph/steps/inputs/outputs and return it.
 
@@ -157,8 +161,6 @@ def build_pydot(
     from .netop import NetworkOperation
     from .modifiers import optional
     from .network import _EvictInstruction, _PinInstruction
-
-    _monkey_patch_for_jupyter(pydot)
 
     assert graph is not None
 
@@ -296,22 +298,36 @@ def build_pydot(
             )
             dot.add_edge(edge)
 
+        if legend:
+            legend_txt = _legend_subgraph_txt()
+            legend_txt = f"""
+                digraph {{
+                    subgraph cluster_legend {{
+                        rankdir=LR;
+                        label="Graphtik Legend";
+
+                        {cluster_text}
+                    }}
+
+                }}
+                """
+            legend_dot = pydot.graph_from_dot_data(_legend_subgraph_txt())[0]
+            dot.add_subgraph(cluster)
+
     return dot
 
 
 def supported_plot_formats():
     """return automatically all `pydot` extensions"""
-    import pydot
-
     return [".%s" % f for f in pydot.Dot().formats]
 
 
-def render_pydot(dot, filename=None, show=False, jupyter_render: str = None):
+def render_pydot(dot: pydot.Dot, filename=None, show=False, jupyter_render: str = None):
     """
     Plot a *Graphviz* dot in a matplotlib, in file or return it for Jupyter.
 
     :param dot:
-        the pre-built *Graphviz* dot instance
+        the pre-built *Graphviz* :class:`pydot.Dot` instance
     :param str filename:
         Write diagram into a file.
         Common extensions are ``.png .dot .jpg .jpeg .pdf .svg``
@@ -366,17 +382,40 @@ def render_pydot(dot, filename=None, show=False, jupyter_render: str = None):
 
 def legend(filename=None, show=None, jupyter_render: Optional[Mapping] = None):
     """Generate a legend for all plots (see :meth:`.Plotter.plot()` for args)"""
-    import pydot
-
-    _monkey_patch_for_jupyter(pydot)
 
     ## From https://stackoverflow.com/questions/3499056/making-a-legend-key-in-graphviz
-    dot_text = """
-    digraph {
-        rankdir=LR;
-        subgraph cluster_legend {
-        label="Graphtik Legend";
+    cluster_text = _legend_subgraph_txt(**locals())
+    dot_text = textwrap.dedent(
+        f"""
+    digraph {{
+        subgraph cluster_legend {{
+            rankdir=LR;
+            label="Graphtik Legend";
 
+            {cluster_text}
+        }}
+
+    }}
+    """
+    )
+
+    dot = pydot.graph_from_dot_data(dot_text)[0]
+    # clus = pydot.Cluster("Graphtik legend", label="Graphtik legend")
+    # dot.add_subgraph(clus)
+
+    # nodes = dot.Node()
+    # clus.add_node("operation")
+
+    return render_pydot(dot, filename=filename, show=show)
+
+
+def _legend_subgraph_txt(
+    filename=None, show=None, jupyter_render: Optional[Mapping] = None
+):
+    """Generate a legend subgraph embedable in other graphs (see :meth:`.Plotter.plot()` for args)"""
+
+    ## From https://stackoverflow.com/questions/3499056/making-a-legend-key-in-graphviz
+    return """
         operation   [shape=oval fontname=italic];
         graphop     [shape=egg label="graph operation" fontname=italic];
         insteps     [penwidth=3 label="execution step" fontname=italic];
@@ -403,15 +442,4 @@ def legend(filename=None, show=None, jupyter_render: Optional[Mapping] = None):
         e33 -> e4 [color=wheat penwidth=2];
         e5 [color=invis penwidth=4 label="execution sequence"];
         e4 -> e5 [color="#009999" penwidth=4 style=dotted arrowhead=vee label=1 fontcolor="#009999"];
-        }
-    }
     """
-
-    dot = pydot.graph_from_dot_data(dot_text)[0]
-    # clus = pydot.Cluster("Graphtik legend", label="Graphtik legend")
-    # dot.add_subgraph(clus)
-
-    # nodes = dot.Node()
-    # clus.add_node("operation")
-
-    return render_pydot(dot, filename=filename, show=show)
