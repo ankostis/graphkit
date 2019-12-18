@@ -196,7 +196,19 @@ def build_pydot(
             a = a.name
         return quote_dot_kws(a)
 
-    dot = pydot.Dot(graph_type="digraph", label=quote_dot_kws(title), fontname="italic", URL=legend_url or None)
+    dot = pydot.Dot(
+        graph_type="digraph",
+        label=quote_dot_kws(title),
+        fontname="italic",
+        URL=legend_url or None,
+    )
+    dot.add_node(pydot.Node(name="__INP__", style="invis"))
+    dot.add_node(pydot.Node(name="__OUT__", style="invis"))
+
+    # add inputs asap to draw at the top
+    #
+    for n in inputs:
+        dot.add_node(pydot.Node(name=n))
 
     # draw nodes
     for nx_node in graph.nodes:
@@ -207,11 +219,17 @@ def build_pydot(
             if steps and nx_node in steps:
                 kw = {"color": "#990000"}
 
+            is_inp = inputs and nx_node in inputs
+            is_out = outputs and nx_node in outputs
+
+            if is_inp:
+                dot.add_edge(pydot.Edge(src="__INP__", dst=nx_node, style="invis"))
+            if is_out:
+                dot.add_edge(pydot.Edge(dst="__OUT__", src=nx_node, style="invis"))
+
             # SHAPE change if with inputs/outputs.
             # tip: https://graphviz.gitlab.io/_pages/doc/info/shapes.html
-            choice = _merge_conditions(
-                inputs and nx_node in inputs, outputs and nx_node in outputs
-            )
+            choice = _merge_conditions(is_inp, is_out)
             shape = "rect invhouse house hexagon".split()[choice]
 
             # LABEL change with solution.
