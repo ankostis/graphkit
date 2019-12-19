@@ -11,6 +11,7 @@ from collections import ChainMap, abc, defaultdict, namedtuple
 from contextvars import ContextVar
 from itertools import count
 from multiprocessing.dummy import Pool
+from threading import RLock
 from typing import (
     Any,
     Callable,
@@ -150,6 +151,10 @@ class Solution(ChainMap, Plotter):
     """
     Collects outputs from operations, preserving :term:`overwrites`.
 
+    .. attribute:: lock
+
+        An RLock for when updating operation results (or failures);
+        not to modify the various collections from 2 operations.
     .. attribute:: plan
 
         the plan that produced this solution
@@ -176,6 +181,7 @@ class Solution(ChainMap, Plotter):
     def __init__(self, plan, input_values):
         super().__init__(input_values)
 
+        self.lock = RLock()
         self.plan = plan
         self.executed = {}
         self.canceled = iset()  # not iterated, order not important, but ...
@@ -240,15 +246,18 @@ class Solution(ChainMap, Plotter):
 
         """
         assert not self.finished, f"Cannot reuse solution: {self}"
-        self._layers[op].update(outputs)
-        self.executed[op] = None
+        with self.lock:
+            self._layers[op].update(outputs)
+            self.executed[op] = None
 
-        if op.reschedule:
-            dag = self.dag
-            to_brake = set(op.provides) - set(outputs)
-            to_brake = [(op, out) for out in to_brake if not isinstance(out, sideffect)]
-            dag.remove_edges_from(to_brake)
-            self.canceled.update(_unsatisfied_operations(dag, self))
+            if op.reschedule:
+                dag = self.dag
+                to_brake = set(op.provides) - set(outputs)
+                to_brake = [
+                    (op, out) for out in to_brake if not isinstance(out, sideffect)
+                ]
+                dag.remove_edges_from(to_brake)
+                self.canceled.update(_unsatisfied_operations(dag, self))
 
     def operation_failed(self, op, ex):
         """
@@ -257,12 +266,13 @@ class Solution(ChainMap, Plotter):
         It will update :attr:`executed` with the operation status and
         the :attr:`canceled` with the unsatisfiead ops downstream of `op`.
         """
-        assert not self.finished, f"Cannot reuse solution: {self}"
-        self.executed[op] = ex
+        with self.lock:
+            assert not self.finished, f"Cannot reuse solution: {self}"
+            self.executed[op] = ex
 
-        dag = self.dag
-        dag.remove_edges_from(list(dag.out_edges(op)))
-        self.canceled.update(_unsatisfied_operations(dag, self))
+            dag = self.dag
+            dag.remove_edges_from(list(dag.out_edges(op)))
+            self.canceled.update(_unsatisfied_operations(dag, self))
 
     def finish(self):
         """invoked only once, after all ops have been executed"""
