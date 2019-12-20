@@ -14,14 +14,52 @@ https://github.com/pygraphkit/graphtik/releases
 Changelog
 %%%%%%%%%
 
+v4.4.0 (18 Dec 2019, @ankostis): RESCHEDULE for PARTIAL Outputs, on a per op basis
+==================================================================================
++ FIX(NET): keep Solution's insertion order also for PARALLEL executions.
+
++ FIX(NET): use an :class:`.RLock` for spurious errors while operations update
+  the various :class:`Solution` collections concurrently
+  (manifested as concurrent loop modifications).
+
++ FEAT(NET, OP): :term:`reschedule` operations with partial outputs;
+  they must have :attr:`FunctionalOperation.reschedule` set to true,
+  or else they will fail.
+
++ FEAT(OP, netop): specify :term:`endurance`/`reschedule` on a per operation basis,
+  or collectively for all operations grouped under some :term:`netop`.
+
++ REFACT(NETOP):
+
+  + feat(netop): new method :meth:`.NetworkOperation.compile()`, delegating to
+    same-named method of `network`.
+
+  + drop(net): method ``Net.narrowed()``; remember `netop.narrowed(outputs+predicate)`
+    and apply them on `netop.compute()` & ``netop.compile()``.
+
+    - PROS: cache narrowed plans.
+    - CONS: cannot review network, must review plan of (new) `netop.compile()`.
+
+  + drop(netop): `inputs` args in `narrowed()` didn't make much sense,
+    leftover from "unvarying netops";  but existi ni `netop.compile()`.
+
+  + refact(netop): move net-assembly from compose() --> NetOp cstor;
+    now reschedule/endured/merge/method args in cstor.
+
++ fix(build): PyPi README check did not detect forbidden ``raw`` directives,
+  and travis auto-depoyments were failing.
+
++ doc(arch): more terms.
+
+
 v4.3.0 (16 Dec 2019, @ankostis): Aliases
 ========================================
-+ FEAT(OP): support "aliases" of `provides`, to avoid pipe-through operations
++ FEAT(OP): support "aliases" of `provides`, to avoid trivial pipe-through operations,
   just to rename & match operations.
 
 
 v4.2.0 (16 Dec 2019, @ankostis): ENDURED Execution
-==================================================  
+==================================================
 + FEAT(NET): when :func:`.set_endure_execution` configuration is set to true,
   a :term:`netop` will keep on calculating solution, skipping any operations
   downstream from failed ones.  The :term:`solution` eventually collects all failures
@@ -30,15 +68,18 @@ v4.2.0 (16 Dec 2019, @ankostis): ENDURED Execution
 + ENH(DOC,plot): Links in Legend and :ref:`arch` Workflow SVGs now work,
   and delegate to *architecture* terms.
 
-+ ENH(plot): mark :term:`overwrites`, *failed* & *canceled* (see :term:`endurance`).
++ ENH(plot): mark :term:`overwrites`, *failed* & *canceled* in ``repr()``
+  (see :term:`endurance`).
 
 + refact(conf): fully rename confguration opetion ``skip_evictions``.
+
++ REFACT(jetsam): raise after jetsam in situ, better for Readers & Linters.
 
 + enh(net): improve logging.
 
 
-v4.1.0 (13  Dec 2019, @ankostis): ChainMap Solution for PINs, stable TOPOLOGICAL sort
-=====================================================================================
+v4.1.0 (13  Dec 2019, @ankostis): ChainMap Solution for Rewrites, stable TOPOLOGICAL sort
+=========================================================================================
 |v410-flowchart|
 
 + FIX(NET): TOPOLOGICALLY-sort now break ties respecting operations insertion order.
