@@ -24,6 +24,7 @@ from typing import (
     Union,
 )
 
+import dill
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
 
@@ -145,6 +146,11 @@ def _unsatisfied_operations(dag, inputs: Collection) -> List:
             raise AssertionError(f"Unrecognized network graph node {node}")
 
     return unsatisfied
+
+
+def _execute_dill_op(plan_op_sol_dump):
+    (plan, op, sol) = dill.loads(plan_op_sol_dump)
+    plan._call_operation(op, sol)
 
 
 class Solution(ChainMap, Plotter):
@@ -560,12 +566,14 @@ class ExecutionPlan(
             if not upnext:
                 break
 
-            list(
-                pool.imap_unordered(
-                    (lambda op_sol: self._call_operation(*op_sol)),
-                    zip(upnext, itt.repeat(solution)),
-                )
-            )
+            # Dill call args to pass into sub-processes
+            #  See https://stackoverflow.com/a/24673524/548792
+            plan_op_sol_dumps = [
+                dill.dumps((plan, op, sol))
+                for plan, op, sol in zip(itt.repeat(self), upnext, itt.repeat(solution))
+            ]
+
+            list(pool.imap_unordered(_execute_dill_op, plan_op_sol_dumps))
 
     def _execute_sequential_method(self, solution: Solution):
         """
