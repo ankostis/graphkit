@@ -336,15 +336,7 @@ class NetworkOperation(Operation, Plotter):
             log.debug("=== Compiling netop(%s)...", self.name)
             self.last_plan = plan = net.compile(named_inputs.keys(), outputs, predicate)
 
-            log.debug("=== Executing netop(%s)...", self.name)
-
-            solution = plan.execute(named_inputs, outputs)
-
-            ## Log cummulative operations elapsed time.
-            #
-            if log.isEnabledFor(logging.DEBUG):
-                elapsed = sum(solution.elapsed_ms.values())
-                log.debug("=== Completed netop(%s) in %0.3fms", self.name, elapsed)
+            solution = plan.execute(named_inputs, outputs, name=self.name)
 
             return solution
         except Exception as ex:
