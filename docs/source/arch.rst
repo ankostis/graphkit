@@ -201,7 +201,7 @@ Architecture
         some :class:`FunctionalOperation`.
 
         All computed values are retained in it when no specific outputs requested,
-        to :meth:`.NetworkOperation.compute()`, that is, no data-eviction happens.
+        to :meth:`.NetworkOperation.compute()`, that is, no `evictions` happens.
 
     operation
         Either the abstract notion of an action with specified `needs` and `provides`,
@@ -235,9 +235,9 @@ Architecture
         asked `outputs`, `node predicate` and `operation` `needs` & `provides`.
 
     unsatisfied operation
-        The core of `pruning` & `rescheduling`, performed by method
-        :func:`.network._unsatisfied_operations()`, which collects all `operation`\s
-        that fall into any of these 2 cases:
+        The core of `pruning` & `rescheduling`, performed by
+        :func:`.network._unsatisfied_operations()` function, which collects
+        all `operation`\s that fall into any of these 2 cases:
 
         - they have `needs` that do not correspond to any of the given `inputs` or
           the intermediately `compute`\d `outputs` of the `solution`;

@@ -1,6 +1,7 @@
 # Copyright 2016, Yahoo Inc.
 # Licensed under the terms of the Apache License, Version 2.0. See the LICENSE file associated with the project for terms.
 
+import logging
 import math
 import os
 import re
@@ -8,8 +9,9 @@ import sys
 import time
 import types
 from functools import partial
-from multiprocessing import Pool, get_context
+from multiprocessing import Pool, cpu_count
 from multiprocessing import dummy as mp_dummy
+from multiprocessing import get_context
 from operator import add, floordiv, mul, sub
 from pprint import pprint
 
@@ -20,20 +22,23 @@ from graphtik import (
     AbortedException,
     abort_run,
     compose,
+    execution_pool,
     get_execution_pool,
     is_marshal_tasks,
+    tasks_marshalled,
     network,
     operation,
     optional,
-    set_endure_operations,
-    set_execution_pool,
-    set_marshal_tasks,
-    set_skip_evictions,
+    operations_endured,
+    operations_reschedullled,
+    evictions_skipped,
     sideffect,
     vararg,
 )
 from graphtik.netop import NetworkOperation
 from graphtik.op import Operation
+
+log = logging.getLogger(__name__)
 
 
 _slow = pytest.mark.slow
@@ -45,53 +50,42 @@ _marshal = pytest.mark.marshal
 
 @pytest.fixture(
     params=[
-        # Sequential
+        # PARALLEL?, Proc/Thread?, Marshalled?
         (None, None, None),
-        # Thread, unmarshalled
-        pytest.param(("parallel", 0, 0), marks=(_parallel, _thread)),
-        # Thread, Marshalled
-        pytest.param(("parallel", 0, 1), marks=(_parallel, _thread, _marshal)),
-        # # PROCESS, unmarshalled
+        pytest.param((1, 0, 0), marks=(_parallel, _thread)),
+        pytest.param((1, 0, 1), marks=(_parallel, _thread, _marshal)),
+        pytest.param((1, 1, 1), marks=(_parallel, _proc, _marshal, _slow)),
         pytest.param(
-            ("parallel", 1, 0),
+            (1, 1, 0),
             marks=(
                 _parallel,
                 _proc,
                 _slow,
-                pytest.mark.xfail(reason="ProcessPool non-marshal may fail."),
+                pytest.mark.xfail(reason="ProcessPool non-marshaled may fail."),
             ),
         ),
-        # # PROCESS, Marshalled
-        pytest.param(("parallel", 1, 1), marks=(_parallel, _proc, _marshal, _slow)),
     ]
 )
 def exemethod(request):
     """Returns (exemethod, marshal) combinations"""
-    meth, proc_pool, marshal = request.param
+    parallel, proc_pool, marshal = request.param
     nsharks = None  # number of pool swimmers....
 
-    old_marshal = set_marshal_tasks(marshal)
-    try:
-        if meth == "parallel":
+    with tasks_marshalled(marshal):
+        if parallel:
             if proc_pool:
-                if os.name == "posix":
+                if os.name == "posix":  # Aalthough it is the default ...
+                    # NOTE: "spawn" DEADLOCKS!.
                     pool = get_context("fork").Pool(nsharks)
                 else:
                     pool = Pool(nsharks)
             else:
                 pool = mp_dummy.Pool(nsharks)
-            try:
-                old_pool = set_execution_pool(pool)
-                try:
-                    yield meth
-                finally:
-                    set_execution_pool(old_pool)
-            finally:
-                pool.terminate()
+
+            with execution_pool(pool), pool:
+                yield parallel
         else:
-            yield meth
-    finally:
-        set_marshal_tasks(old_marshal)
+            yield parallel
 
 
 def scream(*args, **kwargs):
@@ -389,7 +383,7 @@ def test_aliases(exemethod):
         "test_net",
         operation(lambda: "A", name="op1", provides="a", aliases={"a": "b"})(),
         operation(lambda x: x * 2, name="op2", needs="b", provides="c")(),
-        method=exemethod,
+        parallel=exemethod,
     )
     assert op() == {"a": "A", "b": "A", "c": "AA"}
 
@@ -508,7 +502,7 @@ def test_pruning_not_overrides_given_intermediate(exemethod):
         "pipeline",
         operation(name="not run", needs=["a"], provides=["overidden"])(scream),
         operation(name="op", needs=["overidden", "c"], provides=["asked"])(add),
-        method=exemethod,
+        parallel=exemethod,
     )
 
     inputs = {"a": 5, "overidden": 1, "c": 2}
@@ -541,7 +535,7 @@ def test_pruning_multiouts_not_override_intermediates1(exemethod):
             lambda x: (x, 2 * x)
         ),
         operation(name="add", needs=["overidden", "calced"], provides=["asked"])(add),
-        method=exemethod,
+        parallel=exemethod,
     )
 
     inp1 = {"a": 5, "overidden": 1}
@@ -599,7 +593,7 @@ def test_pruning_multiouts_not_override_intermediates2(exemethod):
         ),
         operation(name="op1", needs=["overidden", "c"], provides=["d"])(add),
         operation(name="op2", needs=["d", "e"], provides=["asked"])(mul),
-        method=exemethod,
+        parallel=exemethod,
     )
 
     inputs = {"a": 5, "overidden": 1, "c": 2}
@@ -641,7 +635,7 @@ def test_pruning_with_given_intermediate_and_asked_out(exemethod):
         operation(name="unjustly pruned", needs=["given-1"], provides=["a"])(identity),
         operation(name="shortcuted", needs=["a", "b"], provides=["given-2"])(add),
         operation(name="good_op", needs=["a", "given-2"], provides=["asked"])(add),
-        method=exemethod,
+        parallel=exemethod,
     )
 
     inps = {"given-1": 5, "b": 2, "given-2": 2}
@@ -728,7 +722,7 @@ def test_unsatisfied_operations(exemethod):
         "pipeline",
         operation(name="add", needs=["a", "b1"], provides=["a+b1"])(add),
         operation(name="sub", needs=["a", "b2"], provides=["a-b2"])(sub),
-        method=exemethod,
+        parallel=exemethod,
     )
 
     exp = {"a": 10, "b1": 2, "a+b1": 12}
@@ -750,7 +744,7 @@ def test_unsatisfied_operations_same_out(exemethod):
         operation(name="mul", needs=["a", "b1"], provides=["ab"])(mul),
         operation(name="div", needs=["a", "b2"], provides=["ab"])(floordiv),
         operation(name="add", needs=["ab", "c"], provides=["ab_plus_c"])(add),
-        method=exemethod,
+        parallel=exemethod,
     )
 
     #  Parallel FAIL! in #26
@@ -890,8 +884,7 @@ def test_sideffect_no_real_data(exemethod, netop_sideffect1: NetworkOperation):
         get_execution_pool(), types.FunctionType  # mp_dummy.Pool
     )
 
-    graph = netop_sideffect1
-    graph.set_execution_method(exemethod)
+    graph = netop_sideffect1.narrowed(parallel=exemethod)
     inp = {"box": [0], "a": True}
 
     ## Normal data must not match sideffects.
@@ -953,7 +946,7 @@ def test_sideffect_real_input(reverse, exemethod):
     if reverse:
         ops = reversed(ops)
     # Designate `a`, `b` as sideffect inp/out arguments.
-    graph = compose("mygraph", *ops, method=exemethod)
+    graph = compose("mygraph", *ops, parallel=exemethod)
 
     box_orig = [0]
     assert graph(**{"box": [0], "a": True}) == {
@@ -972,8 +965,7 @@ def test_sideffect_steps(exemethod, netop_sideffect1: NetworkOperation):
         get_execution_pool(), types.FunctionType  # mp_dummy.Pool
     )
 
-    netop = netop_sideffect1
-    netop.set_execution_method(exemethod)
+    netop = netop_sideffect1.narrowed(parallel=exemethod)
     box_orig = [0]
     sol = netop.compute({"box": [0], sideffect("a"): True}, ["box", sideffect("c")])
     assert sol == {"box": box_orig if sidefx_fail else [1, 2, 3]}
@@ -1027,7 +1019,7 @@ def test_optional_per_function_with_same_output(exemethod):
 
     # Normal order
     #
-    pipeline = compose("partial_optionals", add_op, sub_op_optional, method=exemethod)
+    pipeline = compose("partial_optionals", add_op, sub_op_optional, parallel=exemethod)
     #
     named_inputs = {"a": 1, "b": 2}
     assert pipeline(**named_inputs) == {"a": 1, "a+-b": -1, "b": 2}
@@ -1039,7 +1031,7 @@ def test_optional_per_function_with_same_output(exemethod):
 
     # Inverse op order
     #
-    pipeline = compose("partial_optionals", sub_op_optional, add_op, method=exemethod)
+    pipeline = compose("partial_optionals", sub_op_optional, add_op, parallel=exemethod)
     #
     named_inputs = {"a": 1, "b": 2}
     assert pipeline(**named_inputs) == {"a": 1, "a+-b": 3, "b": 2}
@@ -1127,84 +1119,92 @@ def test_skip_eviction_flag():
         operation(name="add1", needs=["a", "b"], provides=["ab"])(add),
         operation(name="add2", needs=["a", "ab"], provides=["aab"])(add),
     )
-    set_skip_evictions(True)
-    try:
+    with evictions_skipped(True):
         exp = {"a": 1, "b": 3, "ab": 4, "aab": 5}
         assert graph.compute({"a": 1, "b": 3}, "aab") == exp
-    finally:
-        set_skip_evictions(False)
 
 
 @pytest.mark.parametrize(
     "endurance, endured", [(None, True), (True, None), (False, True), (1, 1)]
 )
 def test_execution_endurance(exemethod, endurance, endured):
-    set_endure_operations(endurance)
+    with operations_endured(endurance):
+        opb = operation(
+            scream, needs=["a", "b"], provides=["a+b", "c"], endured=endured
+        )
+        scream1 = opb(name="scream1")
+        scream2 = opb(name="scream2")
+        add1 = operation(name="add1", needs=["a", "b"], provides=["a+b"])(add)
+        add2 = operation(name="add2", needs=["a+b", "b"], provides=["a+2b"])(add)
+        canceled = operation(name="canceled", needs=["c"], provides="cc")(identity)
+        graph = compose(
+            "graph", scream1, add1, scream2, add2, canceled, parallel=exemethod
+        )
 
-    opb = operation(scream, needs=["a", "b"], provides=["a+b", "c"], endured=endured)
-    scream1 = opb(name="scream1")
-    scream2 = opb(name="scream2")
-    add1 = operation(name="add1", needs=["a", "b"], provides=["a+b"])(add)
-    add2 = operation(name="add2", needs=["a+b", "b"], provides=["a+2b"])(add)
-    canceled = operation(name="canceled", needs=["c"], provides="cc")(identity)
-    graph = compose("graph", scream1, add1, scream2, add2, canceled, method=exemethod)
+        inp = {"a": 1, "b": 2}
+        sol = graph(**inp)
+        assert sol.is_failed(scream1) and sol.is_failed(scream2)
+        assert "Must not have run!" in str(sol.executed[scream1])
+        assert sol == {"a+b": 3, "a+2b": 5, **inp}
 
-    inp = {"a": 1, "b": 2}
-    sol = graph(**inp)
-    assert sol.is_failed(scream1) and sol.is_failed(scream2)
-    assert "Must not have run!" in str(sol.executed[scream1])
-    assert sol == {"a+b": 3, "a+2b": 5, **inp}
+        sol = graph.narrowed(outputs="a+2b")(**inp)
+        assert sol.is_failed(scream1) and sol.is_failed(scream2)
+        assert "Must not have run!" in str(sol.executed[scream1])
+        assert sol == {"a+2b": 5}
 
-    sol = graph.narrowed(outputs="a+2b")(**inp)
-    assert sol.is_failed(scream1) and sol.is_failed(scream2)
-    assert "Must not have run!" in str(sol.executed[scream1])
-    assert sol == {"a+2b": 5}
+        # SILENTLY failing asked outputs
+        sol = graph.compute(inp, outputs=["a+2b", "cc"])
+        assert sol == {"a+2b": 5}
 
-    # SILENTLY failing asked outputs
-    sol = graph.compute(inp, outputs=["a+2b", "cc"])
-    assert sol == {"a+2b": 5}
-
-    # Check plotting Fail & Cancel.
-    #
-    dot = str(sol.plot())
-    assert "LightCoral" in dot  # failed
-    assert "Grey" in dot  # Canceled
+        # Check plotting Fail & Cancel.
+        #
+        dot = str(sol.plot())
+        assert "LightCoral" in dot  # failed
+        assert "Grey" in dot  # Canceled
 
 
-def test_rescheduling(exemethod):
+@pytest.mark.parametrize(
+    "resched, rescheduled", [(None, True), (True, None), (None, True), (1, 1)]
+)
+def test_rescheduling(exemethod, resched, rescheduled):
+    canc = operation(lambda: None, name="canc", needs=["b"], provides="cc")()
     op = compose(
         "netop",
         operation(lambda: [1], name="op1", provides=["a", "b"], rescheduled=1)(),
+        canc,
         operation(lambda: NO_RESULT, name="op2", provides=["c"], rescheduled=1)(),
-        operation(lambda: None, name="canc", needs=["b"], provides="cc")(),
         operation(
             lambda *args: sum(args),
             name="op3",
             needs=["a", optional("b"), optional("c")],
             provides=["d"],
         )(),
-        method=exemethod,
+        parallel=exemethod,
     )
-    dot = str(op().plot())
+    sol = op()
+    assert sol == {"a": 1, "d": 1}
+    assert list(sol.canceled) == [canc]
+    dot = str(sol.plot())
     assert "Grey" in dot  # Canceled
     assert "penwidth=4" in dot  # Rescheduled
+
+    ## Check if modified state fails the 2nd time.
     assert op() == {"a": 1, "d": 1}
 
 
 def test_rescheduling_NO_RESULT(exemethod):
     partial = operation(lambda: NO_RESULT, name="op1", provides=["a"], rescheduled=1)()
     canc = operation(lambda: None, name="canc", needs="a", provides="b")()
-    op = compose("netop", partial, canc, method=exemethod)
+    op = compose("netop", partial, canc, parallel=exemethod)
     sol = op()
     assert canc in sol.canceled
     assert partial in sol.executed
 
 
+@pytest.mark.xfail(reason="Spurious copied-reversed gaphs, with dubious cause....")
 def test_multithreading_plan_execution():
-    # From Huygn's test-code given in yahoo/graphkit#31
-    from graphtik import compose, operation
-
     # Compose the mul, sub, and abspow operations into a computation graph.
+    # From Huygn's test-code given in yahoo/graphkit#31
     graph = compose(
         "graph",
         operation(name="mul1", needs=["a", "b"], provides=["ab"])(mul),
@@ -1214,22 +1214,19 @@ def test_multithreading_plan_execution():
         )(partial(abspow, p=3)),
     )
 
-    with mp_dummy.Pool(10) as pool:
-        set_execution_pool(pool)
-        try:
-            pool.map(
-                lambda i: graph.compute(
-                    {"a": 2, "b": 5}, ["a_minus_ab", "abs_a_minus_ab_cubed"]
-                ),
-                range(100),
-            )
-        finally:
-            set_execution_pool(None)
+    with mp_dummy.Pool(int(2 * cpu_count())) as pool, execution_pool(pool):
+        pool.map(
+            # lambda i: graph.narrowed(name='graph').compute(
+            lambda i: graph.compute(
+                {"a": 2, "b": 5}, ["a_minus_ab", "abs_a_minus_ab_cubed"]
+            ),
+            range(300),
+        )
 
 
 @pytest.mark.slow
 def test_parallel_execution(exemethod):
-    if exemethod != "parallel":
+    if not exemethod:
         return
 
     delay = 0.5
@@ -1264,16 +1261,17 @@ def test_parallel_execution(exemethod):
     )
 
     t0 = time.time()
-    pipeline.set_execution_method("parallel")
-    result_threaded = pipeline.compute({"x": 10}, ["co", "go", "do"])
-    print("threaded result")
-    print(result_threaded)
+    result_threaded = pipeline.narrowed(parallel=True).compute(
+        {"x": 10}, ["co", "go", "do"]
+    )
+    # print("threaded result")
+    # print(result_threaded)
 
     t0 = time.time()
-    pipeline.set_execution_method(None)
+    pipeline = pipeline.narrowed(parallel=False)
     result_sequential = pipeline.compute({"x": 10}, ["co", "go", "do"])
-    print("sequential result")
-    print(result_sequential)
+    # print("sequential result")
+    # print(result_sequential)
 
     # make sure results are the same using either method
     assert result_sequential == result_threaded
@@ -1322,7 +1320,7 @@ def test_multi_threading_computes():
 @pytest.mark.parametrize("bools", range(4))
 def test_compose_another_network(exemethod, bools):
     # Code from `compose.rst` examples
-    if exemethod != "parallel":
+    if not exemethod:
         return
 
     parallel1 = bools >> 0 & 1
@@ -1335,9 +1333,8 @@ def test_compose_another_network(exemethod, bools):
         operation(
             name="abspow1", needs=["a_minus_ab"], provides=["abs_a_minus_ab_cubed"]
         )(partial(abspow, p=3)),
+        parallel=parallel1,
     )
-    if parallel1:
-        graphop.set_execution_method("parallel")
 
     assert graphop(a_minus_ab=-8) == {"a_minus_ab": -8, "abs_a_minus_ab_cubed": 512}
 
@@ -1347,9 +1344,8 @@ def test_compose_another_network(exemethod, bools):
         operation(
             name="sub2", needs=["a_minus_ab", "c"], provides="a_minus_ab_minus_c"
         )(sub),
+        parallel=parallel2,
     )
-    if parallel2:
-        bigger_graph.set_execution_method("parallel")
 
     sol = bigger_graph.compute({"a": 2, "b": 5, "c": 5}, ["a_minus_ab_minus_c"])
     assert sol == {"a_minus_ab_minus_c": -13}
@@ -1361,7 +1357,7 @@ def test_abort(exemethod):
         operation(name="A", needs=["a"], provides=["b"])(identity),
         operation(name="B", needs=["b"], provides=["c"])(lambda x: abort_run()),
         operation(name="C", needs=["c"], provides=["d"])(identity),
-        method=exemethod,
+        parallel=exemethod,
     )
     with pytest.raises(AbortedException) as exinfo:
         pipeline(a=1)
@@ -1376,6 +1372,6 @@ def test_abort(exemethod):
     pipeline = compose(
         "pipeline",
         operation(name="A", needs=["a"], provides=["b"])(identity),
-        method=exemethod,
+        parallel=exemethod,
     )
     assert pipeline.compute({"a": 1}) == {"a": 1, "b": 1}

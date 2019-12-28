@@ -144,22 +144,12 @@ class Solution(ChainMap, Plotter):
         self.is_parallel = is_parallel_tasks()
         self.is_marshal = is_marshal_tasks()
 
-        ## OPTIMIZATION: decide if the `plan.dag` will be modified,
-        #  while searching for `canceled` ops downstreams,
-        #  (to avoid cloning dag needlesly):
-        #
-        #  - if endurance is enabled globally/for any op, or
-        #  - if rescheduling is enabled globally/for any op.
-        #
-        dag_needs_modifs = is_solid_true(
-            self.is_endurance,
-            self.is_reschedule,
-            any(op.rescheduled or op.endured for op in yield_ops(plan.steps)),
-        )
-
-        ## From the cloned `dag` will be removed the downstream edges
-        #  of partial outputs or from `provides` of failed operations.
-        self.dag = plan.dag.copy() if dag_needs_modifs else plan.dag
+        ## Clone will be modified, by removing the downstream edges of:
+        #  - any partial outputs not provided, or
+        #  - all `provides` of failed operations.
+        # FIXME: SPURIOUS dag reversals on multi-threaded runs (see below next assertion)!
+        self.dag = plan.dag.copy()
+        # assert next(iter(dag.edges))[0] == next(iter(plan.dag.edges))[0]:
 
     def __repr__(self):
         items = ", ".join(f"{k!r}: {v!r}" for k, v in self.items())
@@ -184,7 +174,7 @@ class Solution(ChainMap, Plotter):
         self._layers[op].update(outputs)
         self.executed[op] = None
 
-        if op.rescheduled:
+        if is_solid_true(self.is_reschedule, op.rescheduled):
             dag = self.dag
             missing_outs = iset(op.provides) - set(outputs)
             to_brake = [
@@ -192,7 +182,8 @@ class Solution(ChainMap, Plotter):
             ]
             dag.remove_edges_from(to_brake)
             canceled = _unsatisfied_operations(dag, self)
-            newly_canceled = iset(canceled) - self.canceled
+            # Minus executed, bc partial-out op might not have any provides left.
+            newly_canceled = iset(canceled) - self.canceled - self.executed
             if newly_canceled and log.isEnabledFor(logging.INFO):
                 log.info(
                     "... SKIPPING +%s ops%s due to partial outs%s of op(%s).",
@@ -540,7 +531,7 @@ class ExecutionPlan(
 
         return [prep_task(op) for op in operations]
 
-    def _handle_task(self, op, solution, future):
+    def _handle_task(self, future, op, solution):
         """Un-dill parallel task results (if marshalled), and update solution / handle failure."""
         try:
             outputs = future.get()
@@ -582,22 +573,23 @@ class ExecutionPlan(
         # scheduled, then schedule them onto a thread pool, then collect their
         # results onto a memory solution for use upon the next iteration.
         while True:
+            ## Note: do not check abort in between task handling (at the bottom),
+            #  or it would ignore solution updates from already executed tasks.
             self._check_if_aborted(solution)
 
             # the upnext list contains a list of operations for scheduling
             # in the current round of scheduling
             upnext = []
+            # TODO: optimization: start batches from previoues last op).
             for node in self.steps:
                 ## Determines if a Operation is ready to be scheduled for execution
                 #  based on what has already been executed.
                 if (
                     isinstance(node, Operation)
                     and node not in solution.executed
-                    and set(
-                        n
-                        for n in nx.ancestors(self.dag, node)
-                        if isinstance(n, Operation)
-                    ).issubset(solution.executed)
+                    and set(yield_ops(nx.ancestors(self.dag, node))).issubset(
+                        solution.executed
+                    )
                 ):
                     if node not in solution.canceled:
                         upnext.append(node)
@@ -634,7 +626,7 @@ class ExecutionPlan(
             ## Handle results.
             #
             for op, task in zip(upnext, tasks):
-                self._handle_task(op, solution, task)
+                self._handle_task(task, op, solution)
 
     def _execute_sequential_method(self, solution: Solution):
         """
@@ -651,7 +643,7 @@ class ExecutionPlan(
                     continue
 
                 task = _OpTask(step, solution)
-                self._handle_task(step, solution, task)
+                self._handle_task(task, step, solution)
 
             elif isinstance(step, _EvictInstruction):
                 # Cache value may be missing if it is optional.
@@ -664,7 +656,7 @@ class ExecutionPlan(
             else:
                 raise AssertionError(f"Unrecognized instruction.{step}")
 
-    def execute(self, named_inputs, outputs=None, *, method=None) -> Solution:
+    def execute(self, named_inputs, outputs=None) -> Solution:
         """
         :param named_inputs:
             A maping of names --> values that must contain at least
@@ -698,7 +690,7 @@ class ExecutionPlan(
             # choose a method of execution
             executor = (
                 self._execute_thread_pool_barrier_method
-                if method == "parallel"
+                if is_parallel_tasks or any(op.parallel for op in yield_ops(self.steps))
                 else self._execute_sequential_method
             )
 

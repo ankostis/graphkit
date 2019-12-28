@@ -104,10 +104,6 @@ class NetworkOperation(Operation, Plotter):
     #: The :term:`node predicate` is a 2-argument callable(op, node-data)
     #: that should return true for nodes to include; if None, all nodes included.
     predicate = None
-    #: either `parallel` or None (default);
-    #: if ``"parallel"``, launches multi-threading.
-    #: When `None`, sequential by default.
-    method = None
     #: The execution_plan of the last call to compute(), stored as debugging aid.
     last_plan = None
     #: The outputs names (possibly `None`) used to compile the :attr:`plan`.
@@ -125,7 +121,6 @@ class NetworkOperation(Operation, Plotter):
         parallel=None,
         marshalled=None,
         merge=None,
-        method=None,
         node_props=None,
     ):
         """
@@ -141,7 +136,6 @@ class NetworkOperation(Operation, Plotter):
         # Remember Outputs for future `compute()`?
         self.outputs = outputs
         self.predicate = predicate
-        self.set_execution_method(method)
 
         # Prune network
         self.net = _make_network(
@@ -236,7 +230,7 @@ class NetworkOperation(Operation, Plotter):
             name = f"{name}-{uid}"
 
         return NetworkOperation(
-            [op for op in self.net.graph if isinstance(op, Operation)],
+            list(yield_ops(self.net.graph)),
             name,
             outputs=outputs,
             predicate=predicate,
@@ -244,7 +238,6 @@ class NetworkOperation(Operation, Plotter):
             endured=endured,
             parallel=parallel,
             marshalled=marshalled,
-            method=self.method,
         )
 
     def _build_pydot(self, **kws):
@@ -344,7 +337,7 @@ class NetworkOperation(Operation, Plotter):
             self.last_plan = plan = net.compile(named_inputs.keys(), outputs, predicate)
 
             log.debug("=== Executing netop(%s)...", self.name)
-            solution = plan.execute(named_inputs, outputs, method=self.execution_method)
+            solution = plan.execute(named_inputs, outputs)
 
             return solution
         except Exception as ex:
@@ -358,21 +351,6 @@ class NetworkOperation(Operation, Plotter):
         # To respect narrowed `outputs` must send them due to recompilation.
         return self.compute(input_kwargs, outputs=self.outputs)
 
-    def set_execution_method(self, method):
-        """
-        Determine how the network will be executed.
-
-        :param str method:
-            If "parallel", execute graph operations concurrently
-            using a threadpool.
-        """
-        choices = ["parallel", None]
-        if method not in choices:
-            raise ValueError(
-                "Invalid computation method %r!  Must be one of %s" % (method, choices)
-            )
-        self.execution_method = method
-
 
 def compose(
     name,
@@ -385,7 +363,6 @@ def compose(
     marshalled=None,
     merge=False,
     node_props=None,
-    method=None,
 ) -> NetworkOperation:
     """
     Composes a collection of operations into a single computation graph,
@@ -421,11 +398,6 @@ def compose(
     :param node_props:
         added as-is into NetworkX graph, to provide for filtering
         by :meth:`.NetworkOperation.narrowed()`.
-    :param method:
-        either `parallel` or None (default);
-        if ``"parallel"``, launches multi-threading.
-        Set when invoking a composed graph or by
-        :meth:`.NetworkOperation.set_execution_method()`.
 
     :return:
         Returns a special type of operation class, which represents an
@@ -446,7 +418,6 @@ def compose(
         endured=endured,
         parallel=parallel,
         marshalled=marshalled,
-        method=method,
         merge=merge,
         node_props=node_props,
     )
