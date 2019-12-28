@@ -669,7 +669,7 @@ class ExecutionPlan(
             else:
                 raise AssertionError(f"Unrecognized instruction.{step}")
 
-    def execute(self, named_inputs, outputs=None) -> Solution:
+    def execute(self, named_inputs, outputs=None, *, name="") -> Solution:
         """
         :param named_inputs:
             A maping of names --> values that must contain at least
@@ -700,10 +700,14 @@ class ExecutionPlan(
         try:
             self.validate(named_inputs, outputs)
 
-            # choose a method of execution
+            ## Choose a method of execution
+            #
+            in_parallel = is_parallel_tasks or any(
+                op.parallel for op in yield_ops(self.steps)
+            )
             executor = (
                 self._execute_thread_pool_barrier_method
-                if is_parallel_tasks or any(op.parallel for op in yield_ops(self.steps))
+                if in_parallel
                 else self._execute_sequential_method
             )
 
@@ -718,10 +722,24 @@ class ExecutionPlan(
                 else named_inputs,
             )
 
+            log.debug(
+                "=== Executing netop(%s)%s%s, with %s...",
+                name,
+                ", in parallel" if in_parallel else "",
+                ", evicting" if self.evict else "",
+                self,
+            )
+
             try:
                 executor(solution)
             finally:
                 solution.finish()
+
+                ## Log cummulative operations elapsed time.
+                #
+                if log.isEnabledFor(logging.DEBUG):
+                    elapsed = sum(solution.elapsed_ms.values())
+                    log.debug("=== Completed netop(%s) in %0.3fms", name, elapsed)
 
             # Validate eviction was perfect
             #
