@@ -3,6 +3,7 @@
 """:term:`Compile` & :term:`execute` network graphs of operations."""
 import copy
 import logging
+import random
 import re
 import sys
 import time
@@ -131,6 +132,7 @@ class Solution(ChainMap, Plotter):
         self.canceled = iset()  # not iterated, order not important, but ...
         self.finished = False
         self.elapsed_ms = {}
+        self.solid = "%X" % random.randint(0, 2 ** 16)
 
         ## Pre-populate chainmaps with 1 dict per plan's operation
         #  (appended after of inputs map).
@@ -187,7 +189,8 @@ class Solution(ChainMap, Plotter):
             newly_canceled = iset(canceled) - self.canceled - self.executed
             if newly_canceled and log.isEnabledFor(logging.INFO):
                 log.info(
-                    "... SKIPPING +%s ops%s due to partial outs%s of op(%s).",
+                    "... (%s) SKIPPING +%s ops%s due to partial outs%s of op(%s).",
+                    self.solid,
                     len(newly_canceled),
                     [n.name for n in newly_canceled],
                     list(missing_outs),
@@ -211,7 +214,8 @@ class Solution(ChainMap, Plotter):
         newly_canceled = iset(canceled) - self.canceled
         if newly_canceled and log.isEnabledFor(logging.INFO):
             log.info(
-                "... SKIPPING +%s ops%s due to failed op(%s).",
+                "... (%s) SKIPPING +%s ops%s due to failed op(%s).",
+                self.solid,
                 len(newly_canceled),
                 [n.name for n in newly_canceled],
                 op.name,
@@ -326,13 +330,14 @@ class _OpTask:
     This intermediate class is needed to solve pickiling issue with process executor.
     """
 
-    __slots__ = ("op", "sol", "result")
+    __slots__ = ("op", "sol", "result", "solid")
     logname = __name__
 
-    def __init__(self, op, sol):
+    def __init__(self, op, sol, solid):
         self.op = op
         self.sol = sol
         self.result = UNSET
+        self.solid = solid
 
     def marshalled(self):
         import dill
@@ -343,7 +348,7 @@ class _OpTask:
         if self.result == UNSET:
             self.result = None
             log = logging.getLogger(self.logname)
-            log.debug("+++ Executing %s...", self)
+            log.debug("+++ (%s) Executing %s...", self.solid, self)
             self.result = self.op.compute(self.sol)
 
         return self.result
@@ -500,7 +505,7 @@ class ExecutionPlan(
                 # Mark start time here, to include also marshalling overhead.
                 solution.elapsed_ms[op] = time.time()
 
-                task = _OpTask(op, input_values)
+                task = _OpTask(op, input_values, solution.solid)
                 if is_solid_true(global_marshal, op.marshalled):
                     task = task.marshalled()
 
@@ -548,13 +553,18 @@ class ExecutionPlan(
             solution.operation_executed(op, outputs)
 
             elapsed = elapsed_ms(op)
-            log.debug("... op(%s) completed in %sms.", op.name, elapsed)
+            log.debug(
+                "... (%s) op(%s) completed in %sms.", solution.solid, op.name, elapsed
+            )
         except Exception as ex:
             is_endured = solution.is_endurance or op.endured
             elapsed = elapsed_ms(op)
-            log.warning(
-                "... %s op(%r) FAILED in %0.3fms, due to: %s(%s)",
-                "*enduring* " if is_endured else "",
+            loglevel = logging.WARNING if is_endured else logging.DEBUG
+            log.log(
+                loglevel,
+                "... (%s) %s op(%r) FAILED in %0.3fms, due to: %s(%s)",
+                solution.solid,
+                "*Enduring* " if is_endured else "",
                 op.name,
                 elapsed,
                 type(ex).__name__,
@@ -622,18 +632,26 @@ class ExecutionPlan(
                             )
                         )
                     ):
-                        log.debug(
-                            "... evicting '%s' from solution%s.", node, list(solution)
-                        )
+                        if log.isEnabledFor(logging.DEBUG):
+                            log.debug(
+                                "... (%s) evicting '%s' from solution%s.",
+                                solution.solid,
+                                node,
+                                list(solution),
+                            )
                         del solution[node]
 
             # stop if no nodes left to schedule, exit out of the loop
             if not upnext:
                 break
 
-            log.debug(
-                "+++ Parallel batch: %s", ", ".join(str(op.name) for op in upnext)
-            )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    "+++ (%s) Parallel batch%s on solution%s.",
+                    solution.solid,
+                    list(op.name for op in upnext),
+                    list(solution),
+                )
             tasks = self._prepare_tasks(upnext, solution, pool, parallel, marshal)
 
             ## Handle results.
@@ -655,14 +673,17 @@ class ExecutionPlan(
                 if step in solution.canceled:
                     continue
 
-                task = _OpTask(step, solution)
+                task = _OpTask(step, solution, solution.solid)
                 self._handle_task(task, step, solution)
 
             elif isinstance(step, _EvictInstruction):
                 # Cache value may be missing if it is optional.
                 if step in solution:
                     log.debug(
-                        "... evicting '%s' from solution%s.", step, list(solution)
+                        "... (%s) evicting '%s' from solution%s.",
+                        solution.solid,
+                        step,
+                        list(solution),
                     )
                     del solution[step]
 
@@ -723,10 +744,12 @@ class ExecutionPlan(
             )
 
             log.debug(
-                "=== Executing netop(%s)%s%s, with %s...",
+                "=== (%s) Executing netop(%s)%s%s, on inputs%s, according to %s...",
+                solution.solid,
                 name,
                 ", in parallel" if in_parallel else "",
                 ", evicting" if self.evict else "",
+                list(solution),
                 self,
             )
 
@@ -739,7 +762,12 @@ class ExecutionPlan(
                 #
                 if log.isEnabledFor(logging.DEBUG):
                     elapsed = sum(solution.elapsed_ms.values())
-                    log.debug("=== Completed netop(%s) in %0.3fms", name, elapsed)
+                    log.debug(
+                        "=== (%s) Completed netop(%s) in %0.3fms.",
+                        solution.solid,
+                        name,
+                        elapsed,
+                    )
 
             # Validate eviction was perfect
             #
