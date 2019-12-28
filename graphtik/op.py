@@ -12,6 +12,7 @@ from typing import Callable, Mapping, Tuple, Union
 from boltons.setutils import IndexedSet as iset
 
 from .base import NO_RESULT, UNSET, Items, Plotter, aslist, astuple, jetsam
+from .config import is_reschedule_operations, is_solid_true
 from .modifiers import optional, sideffect, vararg, varargs
 
 log = logging.getLogger(__name__)
@@ -266,7 +267,7 @@ class FunctionalOperation(Operation):
 
     def _zip_results_with_provides(self, results, fn_expected: iset) -> dict:
         """Zip results with expected "real" (without sideffects) `provides`."""
-
+        rescheduled = is_solid_true(is_reschedule_operations(), self.rescheduled)
         if not fn_expected:  # All provides were sideffects?
             if results and results != NO_RESULT:
                 ## Do not scream,
@@ -303,7 +304,7 @@ class FunctionalOperation(Operation):
 
             missmatched = fn_expected - res_names
             if missmatched:
-                if self.rescheduled:
+                if rescheduled:
                     log.warning(
                         "... Op %r did not provide%s",
                         self.name,
@@ -336,7 +337,7 @@ class FunctionalOperation(Operation):
                     )
                 ngot = len(results)
 
-            if ngot < nexpected and not self.rescheduled:
+            if ngot < nexpected and not rescheduled:
                 raise ValueError(
                     f"Got {ngot - nexpected} fewer results, while expected x{nexpected} "
                     f"provides({list(fn_expected)})!\n  {self}"
@@ -392,7 +393,7 @@ class FunctionalOperation(Operation):
                 )
                 raise ValueError(
                     f"Missing compulsory needs{list(compulsory)}!\n  inputs: {list(named_inputs)}\n  {self}"
-                )
+                ) from None
 
             args.extend(
                 named_inputs[n]
