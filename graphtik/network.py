@@ -130,6 +130,7 @@ class Solution(ChainMap, Plotter):
         self.executed = {}
         self.canceled = iset()  # not iterated, order not important, but ...
         self.finished = False
+        self.elapsed_ms = {}
 
         ## Pre-populate chainmaps with 1 dict per plan's operation
         #  (appended after of inputs map).
@@ -342,21 +343,8 @@ class _OpTask:
         if self.result == UNSET:
             self.result = None
             log = logging.getLogger(self.logname)
-            op = self.op
             log.debug("+++ Executing %s...", self)
-            t0 = time.time()
-            ok = False
-            try:
-                self.result = op.compute(self.sol)
-                ok = True
-            finally:
-                elapsed_ms = round(1000 * (time.time() - t0), 3)
-                log.debug(
-                    "... op(%s) %s in %sms.",
-                    op.name,
-                    "completed" if ok else "FAILED",
-                    elapsed_ms,
-                )
+            self.result = self.op.compute(self.sol)
 
         return self.result
 
@@ -494,7 +482,7 @@ class ExecutionPlan(
 
     def _prepare_tasks(
         self, operations, solution, pool, global_parallel, global_marshal
-    ) -> Union["Future", _OpTask]:
+    ) -> Union["Future", _OpTask, bytes]:
         """
         Combine ops+inputs, apply :term:`marshalling`, and submit to :term:`execution pool` (or not) ...
 
@@ -509,6 +497,9 @@ class ExecutionPlan(
 
         def prep_task(op):
             try:
+                # Mark start time here, to include also marshalling overhead.
+                solution.elapsed_ms[op] = time.time()
+
                 task = _OpTask(op, input_values)
                 if is_solid_true(global_marshal, op.marshalled):
                     task = task.marshalled()
@@ -518,9 +509,10 @@ class ExecutionPlan(
                         raise ValueError(
                             "With `parallel` you must `set_execution_pool().`"
                         )
+
                     task = pool.apply_async(_do_task, (task,))
                 elif isinstance(task, bytes):
-                    # Marshaled tasks need `_do_task()`.
+                    # Marshalled (but non-parallel) tasks still need `_do_task()`.
                     task = partial(_do_task, task)
                     task.get = task.__call__
 
@@ -531,9 +523,22 @@ class ExecutionPlan(
 
         return [prep_task(op) for op in operations]
 
-    def _handle_task(self, future, op, solution):
+    def _handle_task(self, future, op, solution) -> None:
         """Un-dill parallel task results (if marshalled), and update solution / handle failure."""
+
+        def elapsed_ms(op):
+            t0 = solution.elapsed_ms[op]
+            solution.elapsed_ms[op] = elapsed = round(1000 * (time.time() - t0), 3)
+
+            return elapsed
+
         try:
+            ## Reset start time for Sequential tasks
+            #  (bummer, they will miss marshalling overhead).
+            #
+            if isinstance(future, _OpTask):
+                solution.elapsed_ms[op] = time.time()
+
             outputs = future.get()
             if isinstance(outputs, bytes):
                 import dill
@@ -541,20 +546,28 @@ class ExecutionPlan(
                 outputs = dill.loads(outputs)
 
             solution.operation_executed(op, outputs)
+
+            elapsed = elapsed_ms(op)
+            log.debug("... op(%s) completed in %sms.", op.name, elapsed)
         except Exception as ex:
-            if not solution.is_endurance and not op.endured:
+            is_endured = solution.is_endurance or op.endured
+            elapsed = elapsed_ms(op)
+            log.warning(
+                "... %s op(%r) FAILED in %0.3fms, due to: %s(%s)",
+                "*enduring* " if is_endured else "",
+                op.name,
+                elapsed,
+                type(ex).__name__,
+                ex,
+            )
+
+            if is_endured:
+                solution.operation_failed(op, ex)
+            else:
                 # Although `plan` have added to jetsam in `compute()``,
                 # add it again, in case compile()/execute() is called separately.
                 jetsam(ex, locals(), "solution", task="future", plan="self")
                 raise
-
-            log.warning(
-                "... enduring op(%r) FAILED due to: %s(%s)",
-                op.name,
-                type(ex).__name__,
-                ex,
-            )
-            solution.operation_failed(op, ex)
 
     def _execute_thread_pool_barrier_method(self, solution: Solution):
         """
