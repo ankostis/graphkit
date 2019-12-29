@@ -54,14 +54,27 @@ _marshal = pytest.mark.marshal
         (None, None, None),
         pytest.param((1, 0, 0), marks=(_parallel, _thread)),
         pytest.param((1, 0, 1), marks=(_parallel, _thread, _marshal)),
-        pytest.param((1, 1, 1), marks=(_parallel, _proc, _marshal, _slow)),
+        pytest.param(
+            (1, 1, 1),
+            marks=(
+                _parallel,
+                _proc,
+                _marshal,
+                _slow,
+                pytest.mark.xfail(
+                    run=False, reason="ProcessPool deadlocks in Travis."
+                ),
+            ),
+        ),
         pytest.param(
             (1, 1, 0),
             marks=(
                 _parallel,
                 _proc,
                 _slow,
-                pytest.mark.xfail(reason="ProcessPool non-marshaled may fail."),
+                pytest.mark.xfail(
+                    run=False, reason="ProcessPool non-marshaled may fail."
+                ),
             ),
         ),
     ]
