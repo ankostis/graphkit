@@ -11,6 +11,7 @@ from collections import ChainMap, abc, defaultdict, namedtuple
 from functools import partial
 from itertools import count
 from typing import Any, Callable, Collection, List, Mapping, Optional, Tuple, Union
+from unittest.mock import MagicMock
 
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
@@ -30,7 +31,7 @@ from .config import (
 from .modifiers import optional, sideffect
 from .op import Operation
 
-log = logging.getLogger(__name__)
+log = MagicMock()#logging.getLogger(__name__)
 
 NodePredicate = Callable[[Any, Mapping], bool]
 
@@ -347,7 +348,7 @@ class _OpTask:
     def __call__(self):
         if self.result == UNSET:
             self.result = None
-            log = logging.getLogger(self.logname)
+            log = MagicMock()#logging.getLogger(self.logname)
             log.debug("+++ (%s) Executing %s...", self.solid, self)
             self.result = self.op.compute(self.sol)
 
@@ -645,12 +646,16 @@ class ExecutionPlan(
             if not upnext:
                 break
 
+            from boltons.iterutils import first
+
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    "+++ (%s) Parallel batch%s on solution%s.",
+                    "+++ (%s) Parallel batch%s on solution%s, \n PLAN edge: %s\n SOL edges: %s.",
                     solution.solid,
                     list(op.name for op in upnext),
                     list(solution),
+                    first(self.dag.edges),
+                    first(solution.dag.edges),
                 )
             tasks = self._prepare_tasks(upnext, solution, pool, parallel, marshal)
 
