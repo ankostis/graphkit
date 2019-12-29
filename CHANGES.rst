@@ -14,6 +14,38 @@ https://github.com/pygraphkit/graphtik/releases
 Changelog
 %%%%%%%%%
 
+v5.0.0 (23 Dec 2019, @ankostis): parallel/marshaled per op
+==========================================================
++ BREAK(NETOP): ``compose(method="parallel") --> compose(parallel=None/False/True)``
+  and  DROP ``netop.set_execution_method(method)``; :term:`parallel` now also controlled
+  with the global :func:`.set_parallel_tasks()` :term:`configurations` function.
+
++ break: rename flags:
+
+  -  ``reschedule --> rescheduleD``
+  - ``masrhal --> masrhalLED``.
+
++ break: rename global configs, as context-managers:
+
+  - ``marshal_parallel_tasks --> tasks_marshalled``
+  - ``endure_operations --> operations_endured``
+
+
++ FEAT(op,netop,net,conf): Global/PerOp PARALLEL configurations.
+
++ refact(conf): make all global flags tri-state (``None, False, True``),
+  allowing to "force" operation flags when not `None`.
+  All default to ``None`` (false).
+
++ refact(conf): extract configs in their own module.
+
++ ENH(plot): set toolltips with ``repr(op)`` to view all operation flags.
+
++ ENH(net,logs): include a "solution-id" in revamped log messages,
+  to facilitate developers in discovering issues while multiple `netops`
+  are running concurrently.
+
+
 v4.4.1 (22 Dec 2019, @ankostis): bugfix debug print
 ===================================================
 + fix(net): had forgotten a debug-print on every operation call.
@@ -67,7 +99,7 @@ Details
   + Network:
 
     + feat: +marshal +_OpTask
-    + refact: plan._call_op --> _handle_op_task
+    + refact: plan._call_op --> _handle_task
     + enh: Make `abort run` variable a *shared-memory* ``Value``.
 
   + REFACT(OP,.TC): not a namedtuple, breaks pickling.
@@ -93,10 +125,10 @@ v4.3.0 (16 Dec 2019, @ankostis): Aliases
 
 v4.2.0 (16 Dec 2019, @ankostis): ENDURED Execution
 ==================================================
-+ FEAT(NET): when :func:`.set_endure_execution` configuration is set to true,
++ FEAT(NET): when :func:`.set_endure_operations` configuration is set to true,
   a :term:`netop` will keep on calculating solution, skipping any operations
   downstream from failed ones.  The :term:`solution` eventually collects all failures
-  in :attr:`.Solution.failures`.
+  in ``Solution.failures`` attribute.
 
 + ENH(DOC,plot): Links in Legend and :ref:`arch` Workflow SVGs now work,
   and delegate to *architecture* terms.
@@ -104,7 +136,7 @@ v4.2.0 (16 Dec 2019, @ankostis): ENDURED Execution
 + ENH(plot): mark :term:`overwrites`, *failed* & *canceled* in ``repr()``
   (see :term:`endurance`).
 
-+ refact(conf): fully rename confguration opetion ``skip_evictions``.
++ refact(conf): fully rename confguration opetion ``evictions_skipped``.
 
 + REFACT(jetsam): raise after jetsam in situ, better for Readers & Linters.
 
@@ -180,6 +212,9 @@ v4.0.0 (11 Dec 2019, @ankostis): NESTED merge, revert v3.x Unvarying, immutable 
 
 + FEAT(:gg:`1`, net, netop): support prunning based on arbitrary operation attributes
   (e.g. assign "colors" to nodes and solve a subset each time).
+
++ ENH(net,sol): introduce *solution-id(`solid`) into each log message,
+  to facilitate tracking execution logs amidst concurrent `netop` runs.
 
 + enh(netop): ``repr()`` now counts number of contained operations.
 
@@ -280,7 +315,7 @@ v2.2.0 (20 Nov 2019, @ankostis): enhance OPERATIONS & restruct their modules
   to be called by clients wishing to automate operation construction.
 + refact(op): replace ``**kwargs`` with named-args in class:`FunctionalOperation`,
   because it allowed too wide args, and offered no help to the user.
-+ REFACT(configs): privatize :data:`network._execution_configs`; expose more
++ REFACT(configs): privatize :data:`._execution_configs`; expose more
   config-methods from base package.
 
 
