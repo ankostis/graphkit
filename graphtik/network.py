@@ -27,6 +27,7 @@ from .config import (
     is_skip_evictions,
     is_solid_true,
 )
+from .base import PushbackWrapper
 from .modifiers import optional, sideffect
 from .op import Operation
 
@@ -592,9 +593,12 @@ class ExecutionPlan(
         parallel = solution.is_parallel
         marshal = solution.is_marshal
 
-        # with each loop iteration, we determine a set of operations that can be
+        # With each loop iteration, we determine a set of operations that can be
         # scheduled, then schedule them onto a thread pool, then collect their
         # results onto a memory solution for use upon the next iteration.
+        #
+        # Optimization: start batches from previoues last op.
+        steps = PushbackWrapper(iter(self.steps))
         while True:
             ## Note: do not check abort in between task handling (at the bottom),
             #  or it would ignore solution updates from already executed tasks.
@@ -603,19 +607,22 @@ class ExecutionPlan(
             # the upnext list contains a list of operations for scheduling
             # in the current round of scheduling
             upnext = []
-            # TODO: optimization: start batches from previoues last op).
-            for node in self.steps:
+            for node in steps:
                 ## Determines if a Operation is ready to be scheduled for execution
                 #  based on what has already been executed.
-                if (
-                    isinstance(node, Operation)
-                    and node not in solution.executed
-                    and set(yield_ops(nx.ancestors(self.dag, node))).issubset(
-                        solution.executed
-                    )
-                ):
-                    if node not in solution.canceled:
-                        upnext.append(node)
+                if isinstance(node, Operation):
+                    if node not in solution.executed and set(
+                        yield_ops(nx.ancestors(self.dag, node))
+                    ).issubset(solution.executed):
+                        if node not in solution.canceled:
+                            upnext.append(node)
+                    else:
+                        #
+                        # Reached a not yet satisfied operation;
+                        # wait for next batch.
+
+                        steps.pushback(node)
+                        break
                 elif isinstance(node, _EvictInstruction):
                     # Only evict if all successors for the data node
                     # have been executed.

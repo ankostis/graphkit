@@ -17,7 +17,7 @@ class Token(str):
     __slots__ = ("hashid",)
 
     def __init__(self, *args):
-        self.hashid = random.randint(-2 ** 32, 2 ** 32 - 1)
+        self.hashid = random.randint(-(2 ** 32), 2 ** 32 - 1)
 
     def __eq__(self, other):
         return self.hashid == getattr(other, "hashid", None)
@@ -85,6 +85,23 @@ def astuple(i, argname, allowed_types=tuple):
             ) from None
 
     return i
+
+
+class PushbackWrapper:
+    """Adapted from https://stackoverflow.com/a/35664122/548792"""
+
+    def __init__(self, iterator):
+        self._iterator = iter(iterator)
+        self._pushed = []
+
+    def __iter__(self):
+        return PushbackWrapper(self._iterator)
+
+    def __next__(self):
+        return self._pushed.pop() if self._pushed else next(self._iterator)
+
+    def pushback(self, item):
+        self._pushed.append(item)
 
 
 def jetsam(ex, locs, *salvage_vars: str, annotation="jetsam", **salvage_mappings):
