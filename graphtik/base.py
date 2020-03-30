@@ -358,5 +358,12 @@ class Plottable(abc.ABC):
         )
 
     @abc.abstractmethod
-    def _build_pydot(self, **kws):
+    def _build_pydot(self, **kws) -> "pydot.Dot":
+        """Override this to customize rendering."""
         pass
+
+    def _repr_html_(self) -> str:
+        """Magic Jupyter method to render plottables as SVGs in Notebooks. """
+        from .plot import dot2svg
+
+        return dot2svg(self.plot())

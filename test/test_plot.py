@@ -194,8 +194,19 @@ def test_plot_matpotlib(pipeline, tmp_path):
 def test_plot_jupyter(pipeline, tmp_path):
     ## Try returned  Jupyter SVG.
 
-    dot = pipeline.plot()
-    s = dot._repr_html_()
+    s = pipeline._repr_html_()
+    assert "<svg" in s.lower()
+    s = pipeline.plot()._repr_html_()
+    assert "<svg" in s.lower()
+
+    s = pipeline.net._repr_html_()
+    assert "<svg" in s.lower()
+
+    sol = pipeline(a=1, b1=2)
+    s = sol._repr_html_()
+    assert "<svg" in s.lower()
+
+    s = sol.plan._repr_html_()
     assert "<svg" in s.lower()
 
 
