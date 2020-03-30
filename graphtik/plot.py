@@ -72,9 +72,9 @@ def _parse_jupyter_render(dot) -> Tuple[str, str, str]:
     return svg_pan_zoom_json, svg_element_styles, svg_container_styles
 
 
-def _dot2svg(dot):
+def dot2svg(dot):
     """
-    Monkey-patching for ``pydot.Dot._repr_html_()` for rendering in jupyter cells.
+    Monkey-patching for `pydot.Dot._repr_html_()` for rendering in jupyter cells.
 
     Original ``_repr_svg_()`` trick was suggested in https://github.com/pydot/pydot/issues/220.
 
@@ -117,7 +117,7 @@ def _dot2svg(dot):
 def _monkey_patch_for_jupyter(pydot):
     """Ensure Dot instance render in Jupyter notebooks. """
     if not hasattr(pydot.Dot, "_repr_html_"):
-        pydot.Dot._repr_html_ = _dot2svg
+        pydot.Dot._repr_html_ = dot2svg
 
 
 def _is_class_value_in_list(lst, cls, value):
