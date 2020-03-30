@@ -362,8 +362,20 @@ class Plottable(abc.ABC):
         """Override this to customize rendering."""
         pass
 
-    def _repr_html_(self) -> str:
+    def _repr_html_(self) -> str:  # pylint: disable=method-hidden
         """Magic Jupyter method to render plottables as SVGs in Notebooks. """
         from .plot import dot2svg
 
         return dot2svg(self.plot())
+
+    @property
+    def raw(self):
+        import copy
+
+        def no_op():
+            pass
+
+        me = copy.copy(self)
+        me._repr_html_ = no_op
+
+        return me

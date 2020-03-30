@@ -196,18 +196,26 @@ def test_plot_jupyter(pipeline, tmp_path):
 
     s = pipeline._repr_html_()
     assert "<svg" in s.lower()
+    s = pipeline.raw._repr_html_()
+    assert s is None
     s = pipeline.plot()._repr_html_()
     assert "<svg" in s.lower()
 
     s = pipeline.net._repr_html_()
     assert "<svg" in s.lower()
+    s = pipeline.net.raw._repr_html_()
+    assert s is None
 
     sol = pipeline(a=1, b1=2)
     s = sol._repr_html_()
     assert "<svg" in s.lower()
+    s = sol.raw._repr_html_()
+    assert s is None
 
     s = sol.plan._repr_html_()
     assert "<svg" in s.lower()
+    s = sol.plan.raw._repr_html_()
+    assert s is None
 
 
 def test_plot_legend(pipeline, tmp_path):

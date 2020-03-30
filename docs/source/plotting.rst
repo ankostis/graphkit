@@ -75,6 +75,8 @@ If you want all details, plot the solution::
 
    Check :data:`.default_jupyter_render` for defaults.
 
+   If you need to disable rendering, use `raw` property on the *plottable*
+   (that property is not defined for a ``pydot.Dot`` instance).
 
 Sphinx-generated sites
 ^^^^^^^^^^^^^^^^^^^^^^
