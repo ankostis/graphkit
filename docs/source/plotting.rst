@@ -67,9 +67,7 @@ If you want all details, plot the solution::
       pip install graphtik[plot]
 
 .. Tip::
-   The |pydot.Dot|_ instances returned by
-   :meth:`.Plottable.plot()` are rendered directly in *Jupyter/IPython* notebooks
-   as SVG images.
+   All :term:`plottable`\s render directly in *Jupyter/IPython* notebooks as SVG images.
 
    You may increase the height of the SVG cell output with something like this::
 

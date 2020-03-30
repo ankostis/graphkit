@@ -337,8 +337,8 @@ Architecture
         (:class:`.NetworkOperation`, :class:`.Network`, :class:`.ExecutionPlan`m :class:`.Solution`)
         or a |pydot.Dot|_ instance (the result of the :meth:`Plottable.plot()` method).
 
-        Such objects may render as SVG in *Jupter notebooks* (through their ``plot()`` method)
-        and can render in a Sphinx site with with the :rst:dir:`graphtik` *RsT directive*.
+        Such objects render as SVG in *Jupter notebooks*, and can render in a Sphinx site
+        with the :rst:dir:`graphtik` *RST directive*.
         You may control the rendered image as explained in the *tip*  of
         the :ref:`plotting` section.
 
