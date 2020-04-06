@@ -141,46 +141,53 @@ with the :rst:role:`graphtik` role (see :ref:`sphinxext-examples` below).
    Specifically the "interesting" options are these:
 
    .. rst:directive:option:: graphvar: (string, optional) varname
-         :type: `str`
+      :type: `str`
 
-         the variable name containing what to render, which it can be:
+      the variable name containing what to render, which it can be:
 
-         - an instance of :class:`.Plottable` (such as :class:`.NetworkOperation`,
-           :class:`.Network`, :class:`.ExecutionPlan` or :class:`.Solution`);
+      - an instance of :class:`.Plottable` (such as :class:`.NetworkOperation`,
+         :class:`.Network`, :class:`.ExecutionPlan` or :class:`.Solution`);
 
-         - an already plotted |pydot.Dot|_ instance, ie, the result of a :meth:`.plot()` call
+      - an already plotted |pydot.Dot|_ instance, ie, the result of a :meth:`.plot()` call
 
-         If missing, it renders the last variable in the doctest code assigned with
-         the above types.
+      If missing, it renders the last variable in the doctest code assigned with
+      the above types.
 
    .. rst:directive:option:: graph-format: png | svg | svgz | pdf | `None`
-         :type: choice, default: `None`
+      :type: choice, default: `None`
 
-         if `None`, format decided according to active builder, roughly:
-            - "html"-like: svg
-            - "latex": pdf
+      if `None`, format decided according to active builder, roughly:
+         - "html"-like: svg
+         - "latex": pdf
 
-         Note that SVGs support zooming, tooltips & URL links, while PNGs support
-         image maps for linkable areas.
+      Note that SVGs support zooming, tooltips & URL links, while PNGs support
+      image maps for linkable areas.
 
    .. rst:directive:option:: zoomable: <empty>, (true, 1, yes, on) | (false, 0, no, off)
-         :type: `bool`
+      :type: `bool`
 
-         Enable/disable interactive pan+zoom of SVGs;
-         if missing/empty, :confval:`graphtik_zoomable` assumed.
+      Enable/disable interactive pan+zoom of SVGs;
+      if missing/empty, :confval:`graphtik_zoomable` assumed.
 
    .. rst:directive:option:: zoomable-opts: <empty>, (true, 1, yes, on) | (false, 0, no, off)
-         :type: `str`
+      :type: `str`
 
-         A JS-object with `the options <https://github.com/ariutta/svg-pan-zoom#how-to-use>`_
-         for the interactive zoom+pan pf SVGs.
-         If missing, :confval:`graphtik_zoomable_options` assumed.
-         Specify ``{}`` explicitly to force library's default options.
+      A JS-object with `the options <https://github.com/ariutta/svg-pan-zoom#how-to-use>`_
+      for the interactive zoom+pan pf SVGs.
+      If missing, :confval:`graphtik_zoomable_options` assumed.
+      Specify ``{}`` explicitly to force library's default options.
+
+   .. rst:directive:option:: name: link target id
+      :type: `str`
+
+      Make this netop a hyperlink target identified by this name.
+      If :name: given and no :caption: given, one is created out of this,
+      to act as a permalink.
 
    .. rst:directive:option:: caption: figure's caption
-         :type: `str`
+      :type: `str`
 
-         If given, it is used instead of rendered object's string representation.
+      Text to put underneath the netop.
 
    .. rst:directive:option:: alt
       :type: `str`

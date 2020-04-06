@@ -216,7 +216,7 @@ class _GraphtikTestDirective(extdoctest.TestDirective):
             figure
                 target:         if :name: present
                 dynaimage:      rendered as <img> or <object>
-                caption:        if :caption: present
+                caption:        if :caption: or :name: present
 
     """
 
@@ -284,23 +284,20 @@ class _GraphtikTestDirective(extdoctest.TestDirective):
             image["data-svg-zoom-opts"] = zoomable_options
         figure += image
 
-        ## See sphinx.ext.graphviz:figure_wrapper(),
-        #  and <sphinx.git>/tests/roots/test-add_enumerable_node/enumerable_node.py:MyFigure
-        #
+        # A caption is needed if :name: is given, to create a permalink on it
+        # (see sphinx/writers/html:HTMLTranslator.depart_caption()),
+        # so get it here, not to overwrite it with :name: (if given below).`
         caption = options.get("caption")
-        if caption:
-            inodes, messages = self.state.inline_text(caption, self.lineno)
-            caption_node = nodes.caption(caption, "", *inodes)
-            self.set_source_info(caption_node)
-            caption_node += messages
-            node += caption_node
 
         ## Prepare target,
         #
         if "name" in options:
             ##  adapted from: self.add_name()
             #
-            name = nodes.fully_normalize_name(options.pop("name"))
+            name = options.pop("name")
+            if not caption:
+                caption = _("netop: ``%s``") % name
+            name = nodes.fully_normalize_name(name)
             targetname = f"graphtik-{name}"
             figure["names"].append(targetname)
             self.state.document.note_explicit_target(figure, figure)
@@ -308,6 +305,16 @@ class _GraphtikTestDirective(extdoctest.TestDirective):
             #
             std = cast(StandardDomain, self.env.get_domain("std"))
             std.add_object("graphtik", name, self.env.docname, targetname)
+
+        ## See sphinx.ext.graphviz:figure_wrapper(),
+        #  and <sphinx.git>/tests/roots/test-add_enumerable_node/enumerable_node.py:MyFigure
+        #
+        if caption:
+            inodes, messages = self.state.inline_text(caption, self.lineno)
+            caption_node = nodes.caption(caption, "", *inodes)
+            self.set_source_info(caption_node)
+            caption_node += messages
+            figure += caption_node
 
         return [node]
 
