@@ -18,6 +18,9 @@
     "cSpell.dictionaries": [
         "project"
     ],
+    "cSpell.ignoreRegExpList": [
+        "'s\\b"
+    ],
     "cSpell.ignorePaths": [
         ".git/",
         "*venv*/",
@@ -29,5 +32,7 @@
         "*scratch*",
         "**/spelling_wordlist.txt"
     ],
-    "cSpell.words": []
+    "cSpell.words": [
+        "ctxt"
+    ]
 }

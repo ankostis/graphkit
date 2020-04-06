@@ -259,6 +259,29 @@ class Plottable(abc.ABC):
             a nested dictionary controlling the rendering of graph-plots in Jupyter cells,
             if `None`, defaults to :data:`jupyter_render` (you may modify it in place
             and apply for all future calls).
+        :param node_url_fn:
+            A callback returning a URL string (or `None``) like:
+
+            .. code-block::
+
+                fn(nx_node: Union[Operation, str], ctxt: dict) -> Union[str, None]
+
+            Returning `None` disables URL for this node.
+            Escape will happen afterwards.
+            The `ctxt` param is a named-tuple with the args given here
+            (they might be `None`)::
+
+                inputs, outputs, solution, node_props, edge_props, clusters
+
+            .. Note::
+                SVG tooltips may not work without URL on PDFs:
+                https://gitlab.com/graphviz/graphviz/issues/1425
+
+        :param node_url_fn:
+            A callback returning a tooltip string (or `None`) like the one given
+            to `node_url_fn`.
+            Returning `None` disables tooltip for this node.
+            Escape will happen afterwards.
         :param legend_url:
             a URL to the *graphtik* legend; if it evaluates to false, none is added.
 

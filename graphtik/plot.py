@@ -8,11 +8,16 @@ import json
 import logging
 import os
 import re
+from collections import namedtuple
 from typing import Any, Callable, List, Mapping, Tuple, Union
 from urllib.parse import urlencode
 
 import networkx
 import pydot
+
+from .modifiers import optional
+from .network import _EvictInstruction
+from .op import Operation
 
 log = logging.getLogger(__name__)
 
@@ -191,6 +196,36 @@ def as_identifier(s):
     return s
 
 
+PlotContext = namedtuple(
+    "PlotContext", "inputs, outputs, solution, node_props, edge_props, clusters"
+)
+
+
+def get_node_url(nx_node, ctxt) -> Union[str, None]:
+    if isinstance(nx_node, Operation):
+        try:
+            filename = urlencode(inspect.getfile(nx_node.fn))
+            ## NOTE: Jupyter lab is blocking local-urls (e.g. on SVGs).
+            return f"file://{filename}"
+        except (TypeError, OSError) as ex:
+            log.debug("Ignoring error while inspecting file of %s: %s", nx_node, ex)
+
+
+def get_node_tooltip(nx_node, ctxt: namedtuple) -> Union[str, None]:
+    if isinstance(nx_node, Operation):
+        try:
+            return inspect.getsource(nx_node.fn)
+        except (TypeError, OSError) as ex:
+            log.debug("Ignoring error while inspecting source of %s: %s", nx_node, ex)
+            return str(nx_node)
+    else:
+        ## NOTE: SVG tooltips may not work without URL:
+        #  https://gitlab.com/graphviz/graphviz/issues/1425
+        sol = ctxt.solution
+        if sol is not None:
+            return str(sol.get(nx_node))
+
+
 def build_pydot(
     graph: networkx.Graph,
     name=None,
@@ -203,6 +238,8 @@ def build_pydot(
     edge_props=None,
     clusters=None,
     splines="ortho",
+    node_url_fn=get_node_url,
+    node_tooltip_fn=get_node_tooltip,
     legend_url="https://graphtik.readthedocs.io/en/latest/_images/GraphtikLegend.svg",
 ) -> pydot.Dot:
     """
@@ -213,13 +250,14 @@ def build_pydot(
     See :meth:`.Plottable.plot()` for the arguments, sample code, and
     the legend of the plots.
     """
-    from .op import Operation
-    from .modifiers import optional
-    from .network import _EvictInstruction
 
     _monkey_patch_for_jupyter(pydot)
 
     assert graph is not None
+
+    plot_context = PlotContext(
+        inputs, outputs, solution, node_props, edge_props, clusters
+    )
 
     resched_thickness = 4
     fill_color = "wheat"
@@ -263,18 +301,18 @@ def build_pydot(
     # draw nodes
     for nx_node in graph.nodes:
         if isinstance(nx_node, str):
-            kw = {}
-
-            # FrameColor change by step type
-            if steps and nx_node in steps:
-                kw = {"color": "#990000"}
-
             # SHAPE change if with inputs/outputs.
             # tip: https://graphviz.gitlab.io/_pages/doc/info/shapes.html
             choice = _merge_conditions(
                 inputs and nx_node in inputs, outputs and nx_node in outputs
             )
             shape = "rect invhouse house hexagon".split()[choice]
+
+            kw = {"name": quote_dot_word(nx_node), "shape": shape}
+
+            # FrameColor change by step type
+            if steps and nx_node in steps:
+                kw["color"] = "#990000"
 
             # LABEL change with solution.
             if solution and nx_node in solution:
@@ -284,12 +322,13 @@ def build_pydot(
                     if nx_node in getattr(solution, "overwrites", ())
                     else fill_color
                 )
-                ## NOTE: SVG tooltips not working without URL:
-                #  https://gitlab.com/graphviz/graphviz/issues/1425
-                kw["tooltip"] = html.escape(str(solution.get(nx_node)))
-            node = pydot.Node(name=quote_dot_word(nx_node), shape=shape, **kw,)
+
         else:  # Operation
-            kw = {"fontname": "italic"}
+            kw = {
+                "shape": "oval",
+                "name": quote_dot_word(nx_node.name),
+                "fontname": "italic",
+            }
 
             if nx_node.rescheduled:
                 kw["penwidth"] = resched_thickness
@@ -303,29 +342,16 @@ def build_pydot(
                 kw["style"] = "filled"
                 kw["fillcolor"] = cancel_color
 
-            try:
-                filename = urlencode(inspect.getfile(nx_node.fn))
-                kw["URL"] = f"file://{filename}"
-            except Exception as ex:
-                log.debug("Ignoring error while inspecting file of %s: %s", nx_node, ex)
-            try:
-                fn_tooltip = inspect.getsource(nx_node.fn)
-            except Exception as ex:
-                log.debug(
-                    "Ignoring error while inspecting source of %s: %s", nx_node, ex
-                )
-                fn_tooltip = str(nx_node)
-            kw["tooltip"] = html.escape(fn_tooltip)
+        url = node_url_fn(nx_node, plot_context)
+        if url:
+            kw["URL"] = html.escape(url)
 
-            node = pydot.Node(
-                name=quote_dot_word(nx_node.name),
-                shape="oval",
-                ## NOTE: Jupyter lab is blocking local-urls (e.g. on SVGs).
-                **kw,
-            )
+        tooltip = node_tooltip_fn(nx_node, plot_context)
+        if tooltip:
+            kw["tooltip"] = html.escape(tooltip)
 
+        node = pydot.Node(**kw,)
         _apply_user_props(node, node_props, key=node.get_name())
-
         append_or_cluster_node(dot, nx_node, node)
 
     _report_unmatched_user_props(node_props, "node")
