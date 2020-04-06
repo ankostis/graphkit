@@ -91,7 +91,7 @@ def _dot2svg(dot):
     """
     pan_zoom_json, element_styles, container_styles = _parse_jupyter_render(dot)
     svg_txt = dot.create_svg().decode()
-    html = f"""
+    html_txt = f"""
         <div class="svg_container">
             <style>
                 .svg_container {{
@@ -111,7 +111,7 @@ def _dot2svg(dot):
             {svg_txt}
         </</>
     """
-    return html
+    return html_txt
 
 
 def _monkey_patch_for_jupyter(pydot):
@@ -286,10 +286,10 @@ def build_pydot(
                 )
                 ## NOTE: SVG tooltips not working without URL:
                 #  https://gitlab.com/graphviz/graphviz/issues/1425
-                kw["tooltip"] = str(solution.get(nx_node))
+                kw["tooltip"] = html.escape(str(solution.get(nx_node)))
             node = pydot.Node(name=quote_dot_word(nx_node), shape=shape, **kw,)
         else:  # Operation
-            kw = {"fontname": "italic", "tooltip": str(nx_node)}
+            kw = {"fontname": "italic"}
 
             if nx_node.rescheduled:
                 kw["penwidth"] = resched_thickness
@@ -302,13 +302,20 @@ def build_pydot(
             elif nx_node in getattr(solution, "canceled", ()):
                 kw["style"] = "filled"
                 kw["fillcolor"] = cancel_color
+
             try:
-
                 filename = urlencode(inspect.getfile(nx_node.fn))
-
                 kw["URL"] = f"file://{filename}"
             except Exception as ex:
                 log.debug("Ignoring error while inspecting file of %s: %s", nx_node, ex)
+            try:
+                fn_tooltip = inspect.getsource(nx_node.fn)
+            except Exception as ex:
+                log.debug(
+                    "Ignoring error while inspecting source of %s: %s", nx_node, ex
+                )
+                fn_tooltip = str(nx_node)
+            kw["tooltip"] = html.escape(fn_tooltip)
 
             node = pydot.Node(
                 name=quote_dot_word(nx_node.name),

@@ -242,7 +242,7 @@ def test_node_quoting():
         splines=ortho;
         <edge> [shape=invhouse];
         <digraph&#58; strict> [shape=invhouse];
-        <node> [fontname=italic, shape=oval, tooltip="FunctionalOperation(name='node', needs=['edge', 'digraph: strict'], provides=['<graph>'], fn='add')"];
+        <node> [fontname=italic, shape=oval, tooltip="FunctionalOperation(name=&#x27;node&#x27;, needs=[&#x27;edge&#x27;, &#x27;digraph: strict&#x27;], provides=[&#x27;&lt;graph&gt;&#x27;], fn=&#x27;add&#x27;)"];
         <graph> [shape=house];
         <edge> -> <node>;
         <digraph&#58; strict> -> <node>;
