@@ -241,11 +241,6 @@ def _pub_props(*d, **kw) -> None:
     return {k: v for k, v in dict(*d, *kw).items() if not str(k).startswith("_")}
 
 
-def _render_template(tpl: jinja2.Template, **kw) -> str:
-    """Ignore falsy values, to skip attributes in template all together. """
-    return tpl.render(**{k: v for k, v in kw.items() if v})
-
-
 class NodeArgs(NamedTuple):
     """All the args for :meth:`.Plotter._make_node()` call. """
 
@@ -312,6 +307,12 @@ _jinja2_env.filters["slug"] = jinja2.evalcontextfilter(
     partial(_escape_or_none, escaper=as_identifier)
 )
 _jinja2_env.filters["hrefer"] = _drop_gt_lt
+
+
+def _render_template(tpl: jinja2.Template, **kw) -> str:
+    """Ignore falsy values, to skip attributes in template all together. """
+    # return tpl.render(**{k: v for k, v in kw.items() if v})
+    return tpl.render(**kw)
 
 
 class Style:
