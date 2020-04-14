@@ -295,7 +295,7 @@ def _drop_gt_lt(x):
 
 
 def _escape_or_none(context: jinja2.environment.EvalContext, x, escaper):
-    """Do not markup Nones/empties, not to break `xmlattr` filter."""
+    """Do not markup Nones/empties, so `xmlattr` filter soes not include them."""
     return x and jinja2.Markup(escaper(str(x)))
 
 
@@ -412,11 +412,11 @@ class Style:
                         'COLOR': color | ee,
                         'BGCOLOR': fillcolor | ee
                     } | xmlattr }}
-                ><TR><TD BORDER="1" SIDES="b"
+                ><TR><TD BORDER="1" SIDES="b" ALIGN="left"
                 {{- {
                         'TOOLTIP': op_tooltip | truncate | eee,
                         'HREF': op_url | hrefer | ee,
-                        'TARGET': op_link_target | ee
+                        'TARGET': op_link_target | e
                     } | xmlattr }}
                     >
                     {%- if fontcolor -%}
@@ -429,10 +429,10 @@ class Style:
                     </TD></TR
                 >
                 {%- if fn_name -%}
-                <TR><TD {{- {
+                <TR><TD ALIGN="left" {{- {
                             'TOOLTIP': fn_tooltip | truncate | eee,
                             'HREF': fn_url | hrefer | ee,
-                            'TARGET': fn_link_target | ee
+                            'TARGET': fn_link_target | e
                         } | xmlattr }}
                     >
                     {%- if fontcolor -%}
