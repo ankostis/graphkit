@@ -294,6 +294,15 @@ def _escape_or_none(context: jinja2.environment.EvalContext, x, escaper):
     return x and jinja2.Markup(escaper(str(x)))
 
 
+def _truthies(adict):
+    import pydot
+
+    try:
+        return {k: v for k, v in adict.items() if v}
+    except Exception:
+        return adict
+
+
 _jinja2_env = jinja2.Environment()
 # Default `escape` filter breaks Nones for xmlattr.
 
@@ -307,6 +316,7 @@ _jinja2_env.filters["slug"] = jinja2.evalcontextfilter(
     partial(_escape_or_none, escaper=as_identifier)
 )
 _jinja2_env.filters["hrefer"] = _drop_gt_lt
+_jinja2_env.filters["truthies"] = _truthies
 
 
 def _render_template(tpl: jinja2.Template, **kw) -> str:
