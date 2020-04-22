@@ -152,7 +152,7 @@ class Solution(ChainMap, Plottable):
         (after the :meth:`finalized` has been invoked)
     """
 
-    def __init__(self, plan, input_values):
+    def __init__(self, plan, input_values: dict):
         super().__init__(input_values)
 
         self.plan = plan
@@ -162,9 +162,10 @@ class Solution(ChainMap, Plottable):
         self.elapsed_ms = {}
         self.solid = "%X" % random.randint(0, 2 ** 16)
 
-        ## Pre-populate chainmaps with 1 dict per plan's operation
-        #  (appended after of inputs map).
-        #
+        #: An ordered mapping of plan-operations to their results
+        #: (initially empty dicts).
+        #: The result dictionaries pre-populate this (self) chainmap,
+        #: appended after the given `input_values` dict.
         self._layers = {op: {} for op in yield_ops(plan.steps)}
         self.maps.extend(self._layers.values())
 
@@ -321,7 +322,7 @@ class Solution(ChainMap, Plottable):
                 if pouts and isinstance(pouts, list)
             }
             err_msgs = [
-                f"\n  +--{op.name}: {type(ex).__name__}({ex})"
+                f"\n  +--{op.name}: {type(ex).__name__}('{ex}')"
                 for op, ex in failures.items()
             ]
             msg = (
@@ -930,6 +931,7 @@ class Network(Plottable):
 
         for op in operations:
             self._append_operation(graph, op)
+        self._resolve_aliases()
         self.needs, self.provides = collect_requirements(self.graph)
 
         #: Speed up :meth:`compile()` call and avoid a multithreading issue(?)
@@ -1014,6 +1016,31 @@ class Network(Plottable):
                 kw["sideffect"] = True
                 graph.add_node(_DataNode(n), sideffect=True)
             graph.add_edge(operation, _DataNode(n), **kw)
+        if operation.aliases:
+            for src, dst in operation.aliases:
+                ## Note: aliases may be overwritten here.
+                graph.add_node(operation, _DataNode(dst), _alias_of=src, **kw)
+
+    def _resolve_aliases(self) -> None:
+        """Move aliased nodes with `needs`(out-links) to the real ones. """
+        graph = self.graph
+        edges_to_add, nodes_to_del = [], []
+        for n, aliased_src in graph.nodes(data="_alias_of"):
+            if not aliased_src:
+                continue
+
+            assert (
+                aliased_src in graph.nodes
+            ), f"Unmatched rename {aliased_src} in {graph.nodes}."
+
+            needs_to_move = graph.out_edges(n, data=True)
+            if needs_to_move:
+                ##
+                nodes_to_del.append(n)
+                edges_to_add.extend((aliased_src, v, d) for u, v, d in needs_to_move)
+
+        graph.remove_nodes(nodes_to_del)
+        graph.add_edges_from(edges_to_add)
 
     def _topo_sort_nodes(self, dag) -> List:
         """Topo-sort dag respecting operation-insertion order to break ties."""

@@ -296,11 +296,11 @@ def test_as_renames(inp, exp):
     [
         (
             operation(str, aliases={"a": 1}),
-            r"The `aliases` for ('a',) rename ['a'], not found in provides ()!",
+            r"The `aliases` for ['a'] rename ['a'], not found in provides []!",
         ),
         (
             operation(str, name="t", provides="a", aliases={"a": 1, "b": 2}),
-            r"The `aliases` for ('a', 'b') rename ['b'], not found in provides ('a',)!",
+            r"The `aliases` for ['a', 'b'] rename ['b'], not found in provides ['a']!",
         ),
         (
             operation(

@@ -24,7 +24,7 @@ from .base import (
     jetsam,
 )
 from .config import is_debug, is_reschedule_operations, is_solid_true
-from .modifiers import kw, optional, sideffect, vararg, varargs
+from .modifiers import kw, optional, sideffect, sideffected, vararg, varargs
 
 log = logging.getLogger(__name__)
 
@@ -64,12 +64,17 @@ def as_renames(i, argname):
     return i
 
 
-def reparse_operation_data(name, needs, provides):
+def reparse_operation_data(
+    name, needs, provides
+) -> Tuple[cabc.Hashable, cabc.Collection, cabc.Collection]:
     """
     Validate & reparse operation data as lists.
 
-    As a separate function to be reused by client code
-    when building operations and detect errors early.
+    :return:
+        name, needs, provides,
+
+    As a separate function to be reused by client building operations,
+    to detect errors early.
     """
 
     if not isinstance(name, cabc.Hashable):
@@ -110,6 +115,55 @@ class Operation(abc.ABC):
             the results of running the feed-forward computation on
             ``inputs``.
         """
+
+
+def _spread_sideffects(
+    deps: cabc.Collection,
+) -> Tuple[cabc.Collection, cabc.Collection]:
+    """
+    Build fn/op dependencies from user ones by spreading any :term:`sideffects`.
+
+    :return:
+        the given `deps` duplicated as ``(fn_deps,  op_deps)``, where any instances of
+        :class:`.sideffects` and :class:`.sideffected` are processed like this:
+
+        `fn_deps`
+            - :class:`.sideffected` are replaced by the pure :attr:`.sideffected.fn_dependency`
+              consumed/produced by underlying functions, in the order it is first met
+              (any duplicates are discarded).
+            - :class:`.sideffects` are simply dropped;
+
+        `op_deps`
+            :class:`.sideffected` are replaced by a sequence of "singular" `sideffected`
+            instances, one for each item in their :attr:`.sideffected.sideffects` attribute,
+            in the order they are first met
+            (any duplicates are discarded);
+    """
+
+    def to_fn_deps(dep):
+        return (
+            (dep.fn_dependency,)
+            if isinstance(dep, sideffected)
+            else ()
+            if isinstance(dep, sideffect)
+            else (dep,)
+        )
+
+    def to_op_deps(dep):
+        return (
+            (sideffected(dep.fn_dependency, s) for s in dep.sideffects)
+            if isinstance(dep, sideffected)
+            else (dep,)
+        )
+
+    assert deps is not None
+
+    if deps:
+        fn_deps = iset(nn for n in deps for nn in to_fn_deps(n))
+        op_deps = iset(nn for n in deps for nn in to_op_deps(n))
+        return fn_deps, op_deps
+    else:
+        return deps, deps
 
 
 class FunctionalOperation(Operation):
@@ -220,14 +274,24 @@ class FunctionalOperation(Operation):
         name, needs, provides = reparse_operation_data(name, needs, provides)
         fn_needs, op_needs = needs, needs
         fn_provides, op_provides = provides, provides
+        # fn_needs, op_needs = _spread_sideffects(needs)
+        # fn_provides, op_provides = _spread_sideffects(provides)
 
         if aliases:
             aliases = as_renames(aliases, "aliases")
+            if any(1 for src, dst in aliases if dst in op_provides):
+                bad = ", ".join(
+                    f"{src} -> {dst}" for src, dst in aliases if dst in op_provides
+                )
+                raise ValueError(
+                    f"The `aliases` ({bad}) clash with provides {list(op_provides)}!"
+                )
+
             alias_src, alias_dst = list(zip(*aliases))
             if not set(alias_src) <= set(op_provides):
                 raise ValueError(
-                    f"The `aliases` for {alias_src} rename {list(iset(alias_src) - op_provides)}"
-                    f", not found in provides {op_provides}!"
+                    f"The `aliases` for {list(alias_src)} rename {list(iset(alias_src) - op_provides)}"
+                    f", not found in provides {list(op_provides)}!"
                 )
             if any(isinstance(i, sideffect) for i in alias_src) or any(
                 isinstance(i, sideffect) for i in alias_dst
@@ -236,7 +300,6 @@ class FunctionalOperation(Operation):
                     f"Operation `aliases` must not contain `sideffects`: {aliases}"
                     "\n  Simply add any extra `sideffects` in the `provides`."
                 )
-            op_provides = iset(itt.chain(op_provides, alias_dst))
         else:
             op_provides = fn_provides
 
