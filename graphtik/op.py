@@ -611,41 +611,20 @@ class FunctionalOperation(Operation, Plottable):
         return results
 
     def compute(self, named_inputs, outputs=None) -> dict:
-        try:
-            if self.fn is None:
-                raise ValueError(
-                    f"Operation was not yet provided with a callable `fn`!"
-                )
-            assert self.name is not None, self
+        if self.fn is None:
+            raise ValueError(f"Operation was not yet provided with a callable `fn`!")
+        assert self.name is not None, self
 
-            positional, varargs, kwargs = self._match_inputs_with_fn_needs(named_inputs)
-            results_fn = self.fn(*positional, *varargs, **kwargs)
-            results_op = self._zip_results_with_provides(results_fn, self._fn_provides)
+        positional, varargs, kwargs = self._match_inputs_with_fn_needs(named_inputs)
+        results_fn = self.fn(*positional, *varargs, **kwargs)
+        results_op = self._zip_results_with_provides(results_fn, self._fn_provides)
 
-            if outputs:
-                outputs = set(n for n in outputs if not is_sideffect(n))
-                # Ignore sideffect outputs.
-                results_op = {
-                    key: val for key, val in results_op.items() if key in outputs
-                }
+        if outputs:
+            outputs = set(n for n in outputs if not is_sideffect(n))
+            # Ignore sideffect outputs.
+            results_op = {key: val for key, val in results_op.items() if key in outputs}
 
-            return results_op
-        except Exception as ex:
-            jetsam(
-                ex,
-                locals(),
-                "outputs",
-                "aliases",
-                "results_fn",
-                "results_op",
-                operation="self",
-                args=lambda locs: {
-                    "positional": locs.get("positional"),
-                    "varargs": locs.get("varargs"),
-                    "kwargs": locs.get("kwargs"),
-                },
-            )
-            raise
+        return results_op
 
     def __call__(self, *args, **kwargs):
         """

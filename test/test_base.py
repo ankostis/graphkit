@@ -149,13 +149,6 @@ class _ScreamingOperation(op.Operation):
         # NO old-stuff Operation(fn=_jetsamed_fn, name="test", needs="['a']", provides=[]),
         (
             lambda: fnt.partial(
-                operation(name="test", needs=["a"], provides=["b"])(_scream).compute,
-                named_inputs={"a": 1},
-            ),
-            "outputs aliases results_fn results_op operation args".split(),
-        ),
-        (
-            lambda: fnt.partial(
                 network.ExecutionPlan(*([None] * 6))._handle_task,
                 op=_ScreamingOperation(),
                 solution=Solution(MagicMock(), {}),
@@ -181,12 +174,6 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
     "acallable, expected_jetsam",
     [
         # NO old-stuff Operation(fn=_jetsamed_fn, name="test", needs="['a']", provides=[]),
-        (
-            lambda: fnt.partial(
-                operation(_scream, name="test").compute, named_inputs=None
-            ),
-            "outputs aliases results_fn results_op operation args".split(),
-        ),
         (
             lambda: fnt.partial(
                 network.ExecutionPlan(*([None] * 6))._handle_task,
@@ -486,7 +473,7 @@ def test_func_sourcelines_func(fn):
     exp = "def _foo():\n    pass"
     got = base.func_sourcelines(fn, human=1)
     assert "".join(got[0]).strip() == exp
-    assert got[1] == 229
+    assert got[1] == 216
 
 
 @pytest.mark.parametrize(
@@ -503,7 +490,7 @@ def test_func_sourcelines_method(fn):
     exp = "def foo(self):\n        pass"
     got = base.func_sourcelines(fn, human=1)
     assert "".join(got[0]).strip() == exp
-    assert got[1] == 234
+    assert got[1] == 221
 
 
 @pytest.mark.parametrize("fn", [eval, fnt.partial(eval)])

@@ -531,14 +531,9 @@ with the following properties, as a debug aid:
 ...     )(a=None)
 ... except ValueError as ex:
 ...     pprint(ex.jetsam)
-{'aliases': None,
- 'args': {'kwargs': {}, 'positional': [None], 'varargs': []},
- 'network': Network(x3 nodes, x1 ops: screamer),
- 'operation': FunctionalOperation(name='screamer', needs=['a'], provides=['foo'], fn='scream'),
+{'network': Network(x3 nodes, x1 ops: screamer),
  'outputs': None,
  'plan': ExecutionPlan(needs=['a'], provides=['foo'], x1 steps: screamer),
- 'results_fn': None,
- 'results_op': None,
  'solution': {'a': None},
  'task': OpTask(FunctionalOperation(name='screamer', needs=['a'], provides=['foo'], fn='scream'), sol_keys=['a'])}
 
