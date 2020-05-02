@@ -615,11 +615,11 @@ class Theme:
     kw_edge = {}
     kw_edge_optional = {"style": ["dashed"]}
     kw_edge_sideffect = {"color": "blue"}
-    #: Added conditionally if `_alias_of` found in edge-attrs.
+    #: Added conditionally if `alias_of` found in edge-attrs.
     kw_edge_alias = {
         "fontsize": 11,  # default: 14
         "label": make_template(
-            "<<I>(alias of)</I><BR/>{{ nx_attrs['_alias_of'] | eee }}>"
+            "<<I>(alias of)</I><BR/>{{ nx_attrs['alias_of'] | eee }}>"
         ),
     }
     #: Rendered if ``fn_kwarg`` exists in `nx_attrs`.
@@ -1263,7 +1263,7 @@ class Plotter:
             styles.add("kw_edge_optional")
         if edge_attrs.get("sideffect"):
             styles.add("kw_edge_sideffect")
-        if edge_attrs.get("_alias_of"):
+        if edge_attrs.get("alias_of"):
             styles.add("kw_edge_alias")
         if edge_attrs.get("fn_kwarg"):
             styles.add("kw_edge_mapping_fn_kwarg")

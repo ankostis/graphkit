@@ -1031,7 +1031,7 @@ class Network(Plottable):
 
             if n in alias_sources:
                 src_provide = alias_sources[n]
-                kw["_alias_of"] = src_provide
+                kw["alias_of"] = src_provide
 
             graph.add_edge(operation, n, **kw)
 
