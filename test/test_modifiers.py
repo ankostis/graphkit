@@ -5,6 +5,8 @@ from graphtik.modifiers import (
     optional,
     sideffect,
     sideffected,
+    sideffected_vararg,
+    sideffected_varargs,
     vararg,
     varargs,
     rename_dependency,
@@ -33,9 +35,9 @@ from graphtik.modifiers import (
     ],
 )
 def test_modifs_str(mod, exp):
-    mod = mod()
-    print(mod)
-    assert str(mod) == exp
+    got = str(mod())
+    print(got)
+    assert got == exp
 
 
 @pytest.mark.parametrize(
@@ -60,12 +62,14 @@ def test_modifs_str(mod, exp):
             "sideffected?('f'<--'ff', fn_kwarg='F')",
         ),
         (lambda: sideffected("f", "ff", optional=1), "sideffected?('f'<--'ff')"),
+        (lambda: sideffected_vararg("f", "a"), "sideffected*('f'<--'a')"),
+        (lambda: sideffected_varargs("f", "a", "b"), "sideffected#('f'<--'a', 'b')"),
     ],
 )
 def test_modifs_repr(mod, exp):
-    mod = mod()
-    print(repr(mod))
-    assert repr(mod) == exp
+    got = repr(mod())
+    print(got)
+    assert got == exp
 
 
 def test_recreation():
@@ -88,6 +92,8 @@ def test_recreation_repr():
         (lambda: sideffect(sideffect("a")), "^Expecting "),
         (lambda: sideffected("a", sideffect("a")), "^Expecting "),
         (lambda: sideffected(sideffect("a"), "a"), "^Expecting "),
+        (lambda: sideffected_vararg(sideffect("a"), "a"), "^Expecting "),
+        (lambda: sideffected_varargs(sideffect("a"), "a"), "^Expecting "),
     ],
 )
 def test_sideffected_bad(call, exp):
@@ -126,12 +132,13 @@ def test_withset_bad_kwargs():
             lambda: sideffected("f", "ff", optional=1),
             "sideffected?('p.f'<--'ff', fn_kwarg='f')",
         ),
+        (lambda: sideffected_vararg("f", "a", "b"), "sideffected*('p.f'<--'a', 'b')"),
+        (lambda: sideffected_varargs("f", "a"), "sideffected#('p.f'<--'a')"),
     ],
 )
 def test_modifs_rename_fn(mod, exp):
-    mod = mod()
     renamer = lambda n: f"p.{n}"
-    got = repr(rename_dependency(mod, renamer))
+    got = repr(rename_dependency(mod(), renamer))
     print(got)
     assert got == exp
 
@@ -157,7 +164,6 @@ def test_modifs_rename_fn(mod, exp):
     ],
 )
 def test_modifs_rename_str(mod, exp):
-    mod = mod()
-    got = repr(rename_dependency(mod, "D"))
+    got = repr(rename_dependency(mod(), "D"))
     print(got)
     assert got == exp

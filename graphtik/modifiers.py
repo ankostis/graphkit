@@ -11,14 +11,18 @@ from typing import Optional, Tuple, Union
 
 
 class _Optionals(enum.Enum):
-    optional = 1
-    vararg = 2
-    varargs = 3
+    optional = 0
+    vararg = 1
+    varargs = 2
 
     @property
     def varargish(self):
         """True if the :term:`optionals` is a :term:`varargish`. """
-        return self.value > 1
+        return self.value > 0
+
+    @property
+    def diacritic(self) -> str:
+        return "?*#"[self.value]  # pylint: disable=invalid-sequence-index
 
 
 class _Modifier(str):
@@ -39,15 +43,23 @@ class _Modifier(str):
     )
 
     #: Map my name in `needs` into this kw-argument of the function.
+    #: :func:`is_mapped()` returns it.
     fn_kwarg: str
     #: required is None, regular optional or varargish?
+    #: :func:`is_optional()` returns it.
+    #: All regulars are `mapped`.
     optional: _Optionals
     #: An existing `dependency` in `solution` that sustain (must have sustained)
     #: the :term:`sideffects` by(for) the underlying function.
+    #: :func:`is_sideffected()` returns it.
     sideffected: str
     #: At least one name(s) denoting the :term:`sideffects` modification(s) on
     #: the :term:`sideffected`, performed/required by the operation.
-    #: If it is an empty tuple`, it is an abstract sideffect.
+    #:
+    #: - If it is an empty tuple`, it is an abstract sideffect,
+    #:    and :func:`is_pure_optional()` returns True.
+    #: - If not empty :func:`is_sideffected()` returns true
+    #:   (the :attr:`sideffected`).
     sideffects: Tuple[Union[str, None]]
     #: pre-calculated representation
     _repr: str
@@ -60,54 +72,87 @@ class _Modifier(str):
         sideffects: Tuple[Union[str, None]] = None,
     ) -> "_Modifier":
         sideffected = _repr = None
-        ## Sanity checks and decide
-        #  - string-name on sideffects and
-        #  - repr for all
+        ## Sanity checks
         #
-        assert not optional or _Optionals(optional), ("Invalid optional: ", locals())
-        if optional and optional.varargish:
-            assert not fn_kwarg, (
-                "Varargish cannot map `fn_kwargs` or sideffects:",
-                locals(),
-            )
-            _repr = f"{optional.name}({str(name)!r})"
-        else:
-            if sideffects is not None:
-                if sideffects == ():
-                    assert fn_kwarg is None, (
-                        "Pure sideffects cannot map `fn_kwarg`:",
-                        locals(),
-                    )
-
-                    # Repr display also optionality (irrelevant to object's identity)
-                    qmark = "?" if optional else ""
-                    _repr = f"sideffect{qmark}: {str(name)!r}"
-                    name = f"sideffect: {str(name)!r}"
-                else:  # sideffected
-                    sideffected = name
-                    sfx_str = ", ".join(repr(i) for i in sideffects)
-
-                    ## Repr display also optionality & mapped-fn-kw
-                    #  (irrelevant to object's identity)
-                    #
-                    qmark = "?" if optional else ""
-                    # Mapped string is so convoluted bc it mimics `optional`
-                    # when `fn_kwarg` given.
-                    map_str = (
-                        f", fn_kwarg={fn_kwarg!r}"
-                        if fn_kwarg and fn_kwarg != name
-                        else ""
-                    )
-                    _repr = f"sideffected{qmark}({str(name)!r}<--{sfx_str}{map_str})"
-
-                    name = f"sideffected({str(name)!r}<--{sfx_str})"
-            elif optional or fn_kwarg:
-                map_str = f"-->{fn_kwarg!r}" if fn_kwarg != name else ""
-                _repr = (
-                    f"{'optional' if optional else 'mapped'}({str(name)!r}{map_str})"
+        assert optional is None or isinstance(optional, _Optionals), (
+            "Invalid optional: ",
+            locals(),
+        )
+        # Validate user inputs.
+        #
+        if sideffects:
+            double_sideffects = [
+                f"{type(i).__name__}({i!r})" for i in sideffects if type(i) is not str
+            ]
+            if double_sideffects:
+                raise ValueError(
+                    f"Expecting regular strings as sideffects, got: {double_sideffects!r}"
+                )
+        if optional in (_Optionals.vararg, _Optionals.varargs):
+            if fn_kwarg:
+                raise ValueError(
+                    f"Cannot have `fn_kwargs` with {optional.name} {name!r}"
                 )
 
-        obj = str.__new__(cls, name)
+        ## Ensure all (non-vargish and non-pure-SFX) optionals
+        #  are passed in as kwarg.
+        #
+        if optional == _Optionals.optional and not fn_kwarg and not sideffects == ():
+            fn_kwarg = name
+
+        # Decide:
+        #  - string-name on sideffects
+        #  - repr for all (with diacritics for optionals)
+    if sideffects is not None:
+            if sideffects == ():
+                assert fn_kwarg is None, (
+                    "Pure sideffects cannot map `fn_kwarg`:",
+                    locals(),
+                )
+                if is_sideffect(name):
+                    # import re
+                    # if is_pure_sideffect(name):
+                    #     m = re.match(r"sideffect\((.*)\)", name)
+                    #     if m:
+                    #         name = m.group(1)
+                    # else:
+                    raise ValueError(
+                        "Expecting a regular string for sideffect"
+                        f", got: {type(name).__name__}({name!r})"
+                    )
+
+                # Repr display also optionality (irrelevant to object's identity)
+                qmark = "?" if optional else ""
+                _repr = f"sideffect{qmark}: {str(name)!r}"
+                name = f"sideffect: {str(name)!r}"
+            else:  # sideffected
+                if is_sideffect(name):
+                    raise ValueError(
+                        f"Expecting a non-sideffect for sideffected"
+                        f", got: {type(name).__name__}({name!r})"
+                    )
+
+                sideffected = str(name)
+                sfx_str = ", ".join(repr(i) for i in sideffects)
+
+                qmark = optional.diacritic if optional else ""
+                # Mapped string is so convoluted bc it mimics `optional`
+                # when `fn_kwarg` given.
+                map_str = (
+                    f", fn_kwarg={fn_kwarg!r}" if fn_kwarg and fn_kwarg != name else ""
+                )
+                ## Repr display also optionality & mapped-fn-kw
+                #  (irrelevant to object's identity)
+                _repr = f"sideffected{qmark}({sideffected!r}<--{sfx_str}{map_str})"
+
+                name = f"sideffected({sideffected!r}<--{sfx_str})"
+        elif optional or fn_kwarg:
+            map_str = f"-->{fn_kwarg!r}" if fn_kwarg != name else ""
+            _repr = f"{'optional' if optional else 'mapped'}('{name}'{map_str})"
+        else:
+            raise ValueError(f"Shouldn't it be plain string? {name!r}")
+
+        obj = super().__new__(cls, name)
 
         obj._repr = str(_repr) if _repr is not None else None
         obj.fn_kwarg = fn_kwarg
@@ -146,24 +191,28 @@ def is_mapped(dep) -> Optional[str]:
     """
     Check if a :term:`dependency` is mapped (and get it).
 
-    Note that all non-varargish optionals are mapped (including sideffected optionals).
+    All non-varargish optionals are "mapped" (including sideffected ones).
     """
     return getattr(dep, "fn_kwarg", None)
 
 
 def is_optional(dep) -> bool:
-    """Check (and get) if a :term:`dependency` is optional (varargish/sideffects included)."""
+    """
+    Check (and get) if a :term:`dependency` is optional.
+
+    Varargish & optional sideffects are included.
+    """
     return getattr(dep, "optional", None)
 
 
 def is_vararg(dep) -> bool:
     """Check if an :term:`optionals` dependency is `vararg`."""
-    return getattr(dep, "optional", None) is _Optionals.vararg
+    return getattr(dep, "optional", None) == _Optionals.vararg
 
 
 def is_varargs(dep) -> bool:
     """Check if an :term:`optionals` dependency is `varargs`."""
-    return getattr(dep, "optional", None) is _Optionals.varargs
+    return getattr(dep, "optional", None) == _Optionals.varargs
 
 
 def is_varargish(dep) -> bool:
@@ -190,7 +239,11 @@ def is_sideffected(dep) -> bool:
 
 
 def rename_dependency(dep, ren):
-    """Renames based to a fixed string or calling `ren` if callable, mapped to old"""
+    """
+    Renames `dep` as `ren` or call `ren`` (if callable) to decide its name,
+
+    preserving any :func:`mapped` to old-name.
+    """
     if callable(ren):
         renamer = ren
     else:
@@ -219,7 +272,8 @@ def mapped(name: str, fn_kwarg: str):
     :param fn_kwarg:
         The argument-name corresponding to this named-input.
         If it is None, assumed the same as `name`, so as
-        to behave always like kw-type arg and to preserve fn-name if ever renamed.
+        to behave always like kw-type arg, and to preserve its fn-name
+        if ever renamed.
 
         .. Note::
             This extra mapping argument is needed either for :term:`optionals`
@@ -257,6 +311,7 @@ def mapped(name: str, fn_kwarg: str):
 
         .. graphtik::
     """
+    # Must pass a truthy fn_kwarg bc cstor cannot not know its mapped.
     return _Modifier(name, fn_kwarg=fn_kwarg or name)
 
 
@@ -272,7 +327,8 @@ def optional(name: str, fn_kwarg: str = None):
     :param fn_kwarg:
         the name for the function argument it corresponds;
         if a falsy is given, same as `name` assumed,
-        to behave always like kw-type arg and to preserve fn-name if ever renamed.
+        to behave always like kw-type arg and to preserve its fn-name
+        if ever renamed.
 
     **Example:**
 
@@ -313,7 +369,7 @@ def optional(name: str, fn_kwarg: str = None):
                             fn='myadd')
 
     """
-    return _Modifier(name, fn_kwarg=fn_kwarg or name, optional=_Optionals.optional)
+    return _Modifier(name, fn_kwarg=fn_kwarg, optional=_Optionals.optional)
 
 
 def vararg(name: str):
@@ -490,17 +546,6 @@ def sideffect(name, optional: bool = None):
         .. graphtik::
 
     """
-    if type(name) is not str:
-        # import re
-        # if is_pure_sideffect(name):
-        #     m = re.match(r"sideffect\((.*)\)", name)
-        #     if m:
-        #         name = m.group(1)
-        # else:
-        raise ValueError(
-            "Expecting a regular string for sideffect"
-            f", got: {type(name).__name__}({name!r})"
-        )
     return _Modifier(
         name, optional=_Optionals.optional if optional else None, sideffects=()
     )
@@ -510,8 +555,8 @@ def sideffected(
     dependency: str,
     sideffect0: str,
     *sideffects: str,
-    optional: bool = None,
     fn_kwarg: str = None,
+    optional: bool = None,
 ):
     r"""
     Annotates a :term:`sideffected` dependency in the solution sustaining side-effects.
@@ -519,9 +564,9 @@ def sideffected(
     :param fn_kwarg:
         the name for the function argument it corresponds.
         When optional, it becomes the same as `name` if falsy, so as
-        to behave always like kw-type arg and to preserve fn-name if ever renamed.
+        to behave always like kw-type arg, and to preserve fn-name if ever renamed.
         When not optional, if not given, it's all fine.
-        
+
     Like :func:`.sideffect` but annotating a *real* :term:`dependency` in the solution,
     allowing that dependency to be present both in :term:`needs` and :term:`provides`
     of the same function.
@@ -604,25 +649,23 @@ def sideffected(
 
 
     """
-    sideffects = (sideffect0,) + sideffects
-    ## Sanity checks
-    #
-    invalids = [f"{type(i).__name__}({i!r})" for i in sideffects if type(i) is not str]
-    if invalids:
-        raise ValueError(f"Expecting regular strings as sideffects, got: {invalids!r}")
-    if is_sideffect(dependency):
-        raise ValueError(
-            f"Expecting a non-sideffect for sideffected"
-            f", got: {type(dependency).__name__}({dependency!r})"
-        )
-    ## Mimic `optional` behavior,
-    #  i.e. preserve kwarg-ness if optional.
-    #
-    if optional and not fn_kwarg:
-        fn_kwarg = dependency
     return _Modifier(
         dependency,
-        sideffects=sideffects,
+        sideffects=(sideffect0,) + sideffects,
         optional=_Optionals.optional if optional else None,
         fn_kwarg=fn_kwarg,
+    )
+
+
+def sideffected_vararg(dependency: str, sideffect0: str, *sideffects: str):
+    """Like :func:`sideffected` + :func:`vararg`. """
+    return _Modifier(
+        dependency, sideffects=(sideffect0,) + sideffects, optional=_Optionals.vararg
+    )
+
+
+def sideffected_varargs(dependency: str, sideffect0: str, *sideffects: str):
+    """Like :func:`sideffected` + :func:`varargs`. """
+    return _Modifier(
+        dependency, sideffects=(sideffect0,) + sideffects, optional=_Optionals.varargs,
     )
