@@ -310,7 +310,7 @@ def test_netop_merge_node_props():
     op3 = operation(lambda: None, name="b", node_props={"a": 3, "c": 4})
     netop2 = compose("n2", op2, op3)
 
-    netop = compose("n", netop1, netop2, node_props={"bb": 22, "c": 44}, merge=False)
+    netop = compose("n", netop1, netop2, node_props={"bb": 22, "c": 44}, nest=True)
     exp = {
         "n1.a": {"a": 1, "bb": 22, "c": 44},
         "n2.a": {"a": 11, "b": 0, "bb": 22, "c": 44},
@@ -319,7 +319,7 @@ def test_netop_merge_node_props():
     node_props = _collect_op_props(netop)
     assert node_props == exp
 
-    netop = compose("n", netop1, netop2, node_props={"bb": 22, "c": 44}, merge=True)
+    netop = compose("n", netop1, netop2, node_props={"bb": 22, "c": 44}, nest=False)
     exp = {"a": {"a": 1, "bb": 22, "c": 44}, "b": {"a": 3, "bb": 22, "c": 44}}
     node_props = _collect_op_props(netop)
     assert node_props == exp

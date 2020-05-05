@@ -45,13 +45,31 @@ Architecture
 
     compose
     composition
-        The :term:`phase` where `operation`\s are constructed and grouped into `netop`\s and
-        corresponding `network`\s.
+        The :term:`phase` where `operation`\s are constructed and grouped
+        into `pipeline`\s and corresponding `network`\s based on their `dependencies
+        <dependency>`.
 
         .. Tip::
-            - Use :func:`.operation` factory to construct :class:`.FunctionalOperation` instances.
-            - Use :func:`~.graphtik.compose()` factory to prepare the `net` internally,
-              and build :class:`.NetworkOperation` instances.
+            - Use :func:`.operation` factory to construct :class:`.FunctionalOperation`
+              instances (a.k.a. operations).
+            - Use :func:`.compose()` factory to build :class:`.NetworkOperation`
+              instances (a.k.a. pipelines).
+
+    operation merging
+    operation nesting
+        When `operation`\s and/or `pipeline`\s are `compose`\d together, there are
+        two ways to combine the operations contained into the new pipeline:
+
+        merging
+            (default) any identically-named operations override each other,
+            with the operations added earlier in the :func:`.compose()` call
+            (further to the left) winning over those added later (further to the right).
+
+        nesting
+            the original pipelines are preserved intact in "isolated" clusters,
+            by prefixing the names of their operations (and optionally data)
+            by the name of the respective original pipeline that contained them
+            (or the user defines the renames).
 
     compile
     compilation

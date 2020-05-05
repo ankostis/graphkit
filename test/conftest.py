@@ -1,7 +1,3 @@
-import sys
-from functools import partial
-from pathlib import Path
-from operator import mul, sub
 import pytest
 
 from graphtik import compose, operation
@@ -21,28 +17,3 @@ def debug_mode():
 
     with debug_enabled(True):
         yield
-
-
-def abspow(a, p):
-    c = abs(a) ** p
-    return c
-
-
-@pytest.fixture
-def merge_pipes():
-    graphop = compose(
-        "graphop",
-        operation(name="mul1", needs=["a", "b"], provides=["ab"])(mul),
-        operation(name="sub1", needs=["a", "ab"], provides=["a_minus_ab"])(sub),
-        operation(
-            name="abspow1", needs=["a_minus_ab"], provides=["abs_a_minus_ab_cubed"]
-        )(partial(abspow, p=3)),
-    )
-
-    another_graph = compose(
-        "another_graph",
-        operation(name="mul1", needs=["a", "b"], provides=["ab"])(mul),
-        operation(name="mul2", needs=["c", "ab"], provides=["cab"])(mul),
-    )
-
-    return graphop, another_graph

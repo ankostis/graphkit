@@ -865,7 +865,11 @@ def operation(
 
 
 class NULL_OP(FunctionalOperation):
-    """Eliminates same-named operations added later during term:`operation merging`."""
+    """
+    Eliminates same-named operations added later during term:`operation merging`.
+
+    :seealso: :ref:`merging-operations`
+    """
 
     def __init__(self, name, parents=None):
         super().__init__(name=name, parents=parents)

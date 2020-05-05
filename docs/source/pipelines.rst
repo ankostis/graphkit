@@ -126,35 +126,102 @@ the ``PIL.Image`` if you have it and skip providing the image data string.
 
 Extending pipelines
 -------------------
-Sometimes we have existing computation graph(s) to which we want to append
-operations or other pipelines.
+Sometimes we begin with existing computation graph(s) to which we want to extend
+with other operations and/or pipelines.
 
-Combining
-^^^^^^^^^
-This is simple, since ``compose()`` can *combine* whole pipelines along with
-individual operations and pipelines.
+There are 2 ways to combine operations together, :term:`merging
+<operation merging>` (the default) and :term:`nesting <operation nesting>`.
 
-For example, if we have the above ``graph``, we can add another operation to it
-and create a new graph:
+.. _merging-operations:
 
-    >>> # Add another subtraction operation to the graph.
-    >>> bigger_graph = compose("bigger_graph",
-    ...    graphop,
-    ...    operation(name="sub2", needs=["a_minus_ab", "c"], provides="a_minus_ab_minus_c")(sub)
+Merging
+^^^^^^^
+This is the default mode for :func:`.compose()` when when combining individual operations,
+and it works exactly the same when whole pipelines are involved.
+
+For example, lets suppose that this simple pipeline describes the daily scheduled
+workload of an "empty' day:
+
+    >>> weekday = compose("weekday",
+    ...     operation(str, name="wake up", needs="backlog", provides="tasks"),
+    ...     operation(str, name="sleep", needs="tasks", provides="todos"),
     ... )
 
 .. graphtik::
-    :graphvar: bigger_graph
+    :graphvar: weekday
 
-Notice that the original pipeline is preserved intact in an "isolated" cluster,
-and its operations have been prefixed by the name of that pipeline.
+Now let's do some "work":
 
-Run the graph and print the output:
+    >>> weekday = compose("weekday",
+    ...     operation(lambda t: (t[:-1], t[-1:]),
+    ...               name="work!", needs="tasks", provides=["tasks done", "todos"]),
+    ...     operation(str, name="sleep"),
+    ...     weekday,
+    ... )
 
-    >>> sol = bigger_graph.compute({'a': 2, 'b': 5, 'c': 5},
-    ...                            outputs=["a_minus_ab_minus_c"])
+.. graphtik::
+    :graphvar: weekday
+
+Notice that the pipeline to override was added last, at the bottom; that's because
+the operations *added earlier in the call (further to the left) overrider any
+identically-named operations added later*.
+
+Notice also that the overridden "sleep" operation hasn't got any actual role
+in the schedule.
+We can eliminate "sleep" altogether by pre-registering the special :class:`.NULL_OP`
+operation under the same name, "sleep":
+
+    >>> from graphtik import NULL_OP
+    >>> weekday = compose("weekday", NULL_OP("sleep"), weekday)
+
+.. graphtik::
+    :graphvar: weekday
+
+
+Nesting
+^^^^^^^
+Other times we want preserve all the operations composed, regardless of clashes
+in their names.  This is doable with ``compose(..., nest=True))``.
+
+Lets build a schedule for the the 3-day week (covid19 γαρ...), by combining
+3 *mutated* copies of the daily schedule we built earlier:
+
+    >>> weekdays = [weekday.withset(name=f"day {i}") for i in range(3)]
+    >>> week = compose("week", *weekdays, nest=True)
+
+.. graphtik::
+    :graphvar: week
+
+We now have 3 "isolated" clusters because all operations & data have been prefixed
+with the name of their pipeline they originally belonged to.
+
+Let's suppose we want to break the isolation, and have all sub-pipelines
+consume & produce from a common "backlog" (n.b. in real life, we would have
+a "feeder" & "collector" operations).
+
+We do that by passing a :func:`.callable` as the ``nest`` parameter,
+which will decide which of the nodes of the original pipeline, both operations & data,
+should be prefixed (see :func:`.compose` for the exact specs of that param):
+
+    >>> def rename_predicate(node):
+    ...     if node not in ("backlog", "tasks done", "todos"):
+    ...         return True
+
+    >>> week = compose("week", *weekdays, nest=rename_predicate)
+
+.. graphtik::
+    :graphvar: week
+
+Finally we may run the week's schedule and get the outcome
+(whatever that might be :-), hover the results to see them):
+
+    >>> sol = week.compute({'backlog': "a lot!"})
     >>> sol
-    {'a_minus_ab_minus_c': -13}
+    {'backlog': 'a lot!',
+     'day 0.tasks': 'a lot!',
+     'tasks done': 'a lot', 'todos': '!',
+     'day 1.tasks': 'a lot!',
+     'day 2.tasks': 'a lot!'}
     >>> dot = sol.plot(clusters=True)
 
 .. graphtik::
@@ -162,54 +229,6 @@ Run the graph and print the output:
 .. tip::
     We had to plot with ``clusters=True`` so that we prevent the :term:`plan`
     to insert the "after pruning" cluster (see :attr:`.PlotArgs.clusters`).
-
-
-Merging
-^^^^^^^
-
-Sometimes we have computation graphs -- perhaps ones that share operations --
-and we want to *merge* them into one.
-
-This is doable with ``compose(..., merge=True))``.
-Any identically-named operations are consolidate into a single node, where
-the operation added later in the call (further to the right) wins.
-
-For example, let's say we have ``graphop``, as in the examples above, along with this graph:
-
-    >>> another_graph = compose("another_graph",
-    ...    operation(name="mul1", needs=["a", "b"], provides=["ab"])(mul),
-    ...    operation(name="mul2", needs=["c", "ab"], provides=["cab"])(mul)
-    ... )
-    >>> another_graph
-    NetworkOperation('another_graph', needs=['a', 'b', 'c', 'ab'], provides=['ab', 'cab'], x2 ops: mul1, mul2)
-
-.. graphtik::
-    :name: another_graph
-
-We can merge :graphtik:`graphop` and :graphtik:`another_graph` like so, avoiding a redundant ``mul1`` operation:
-
-.. Note::
-
-    The *names* of the graphs must differ.
-
-..
-
-    >>> merged_graph = compose("merged_graph", graphop, another_graph, merge=True)
-    >>> print(merged_graph)
-    NetworkOperation('merged_graph',
-                      needs=['a', 'b', 'ab', 'a_minus_ab', 'c'],
-                      provides=['ab', 'a_minus_ab', 'abs_a_minus_ab_cubed', 'cab'],
-                      x4 ops:  mul1, sub1, abspow1, mul2)
-
-.. graphtik::
-
-As always, we can run computations with this graph by simply calling it:
-
-    >>> sol = merged_graph.compute({"a": 2, "b": 5, "c": 5}, outputs=["cab"])
-    >>> sol
-    {'cab': 50}
-
-.. graphtik::
 
 .. seealso::
     Consult these test-cases from the full sources of the project:

@@ -645,9 +645,21 @@ def test_node_dot_str1(dot_str_pipeline, monkeypatch):
     assert "<node>" not in dot_str
 
 
-def test_combine_clusters(merge_pipes):
-    p1, p2 = merge_pipes
-    merged_graph = compose("m", p1, p2, merge=False)
+def test_combine_clusters():
+    p1 = compose(
+        "op1",
+        operation(lambda a, b: None, name="op1", needs=["a", "b"], provides=["ab"]),
+        operation(lambda a, b: None, name="op2", needs=["a", "ab"], provides="c"),
+        operation(lambda a: None, name="op3", needs="c", provides="C"),
+    )
+
+    p2 = compose(
+        "op2",
+        operation(lambda a, b: None, name="op1", needs=["a", "b"], provides=["ab"]),
+        operation(lambda a, b: None, name="op2", needs=["c", "ab"], provides=["cab"]),
+    )
+
+    merged_graph = compose("m", p1, p2, nest=True)
     dot: pydot.Dot = merged_graph.plot()
     assert dot.get_subgraph(f"cluster_{p1.name}")
     assert dot.get_subgraph(f"cluster_{p2.name}")

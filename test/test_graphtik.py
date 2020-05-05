@@ -22,6 +22,7 @@ import pytest
 
 from graphtik import (
     NO_RESULT,
+    NULL_OP,
     AbortedException,
     IncompleteExecutionError,
     abort_run,
@@ -103,7 +104,7 @@ def filtdict(d, *keys):
     """
     Keep dict items with the given keys
 
-    >>> filtdict({"a": 1, "b": 2}, "b")
+    filtdict({"a": 1, "b": 2}, "b")
     {'b': 2}
     """
     return type(d)(i for i in d.items() if i[0] in keys)
@@ -279,7 +280,9 @@ def test_network_plan_execute():
     assert sol == exp
 
 
-def test_network_simple_merge():
+def test_network_nest_ops_only():
+    def ops_only(n):
+        return isinstance(n, Operation)
 
     sum_op1 = operation(name="sum_op1", needs=["a", "b"], provides="sum1")(add)
     sum_op2 = operation(name="sum_op2", needs=["a", "b"], provides="sum2")(add)
@@ -298,7 +301,7 @@ def test_network_simple_merge():
     sol = net2(**{"d": 1, "e": 2, "f": 4})
     assert sol == exp
 
-    net3 = compose("merged", net1, net2)
+    net3 = compose("merged", net1, net2, nest=ops_only)
     exp = {
         "a": 3,
         "b": 7,
@@ -319,7 +322,7 @@ def test_network_simple_merge():
     )
 
 
-def test_network_deep_merge():
+def test_network_combine():
     sum_op1 = operation(
         name="sum_op1", needs=[vararg("a"), vararg("b")], provides="sum1"
     )(addall)
@@ -346,7 +349,7 @@ def test_network_deep_merge():
         "NetworkOperation('my network 2', needs=[optional('a'), 'b', 'sum1'], provides=['sum1', 'sum2'], x2 ops"
     )
 
-    net3 = compose("merged", net1, net2, merge=True)
+    net3 = compose("merged", net1, net2)
     exp = {"a": 1, "b": 2, "c": 4, "sum1": 3, "sum2": 5, "sum3": 7}
     assert net3(a=1, b=2, c=4) == exp
 
@@ -356,7 +359,7 @@ def test_network_deep_merge():
 
     ## Reverse ops, change results and `needs` optionality.
     #
-    net3 = compose("merged", net2, net1, merge=True)
+    net3 = compose("merged", net2, net1)
     exp = {"a": 1, "b": 2, "c": 4, "sum1": 3, "sum2": 3, "sum3": 7}
     assert net3(**{"a": 1, "b": 2, "c": 4}) == exp
 
@@ -365,26 +368,53 @@ def test_network_deep_merge():
     )
 
 
-def test_network_merge_in_doctests(merge_pipes):
-    graphop, another_graph = merge_pipes
-    merged_graph = compose("merged_graph", graphop, another_graph, merge=False)
+def test_network_merge_in_doctests():
+    days_count = 3
 
-    print(merged_graph)
-    assert str(merged_graph).startswith(
-        "NetworkOperation('merged_graph', "
-        "needs=['a', 'b', 'ab', 'a_minus_ab', 'c'], "
-        "provides=['ab', 'a_minus_ab', 'abs_a_minus_ab_cubed', 'cab'], x5 ops: "
-        "graphop.mul1, graphop.sub1, graphop.abspow1, another_graph.mul1, another_graph.mul2)"
+    weekday = compose(
+        "weekday",
+        operation(str, name="wake up", needs="backlog", provides="tasks"),
+        operation(str, name="sleep", needs="tasks", provides="todos"),
     )
 
-    merged_graph = compose("merged_graph", graphop, another_graph, merge=True)
-    print(merged_graph)
-    assert str(merged_graph).startswith(
-        "NetworkOperation('merged_graph', "
-        "needs=['a', 'b', 'ab', 'a_minus_ab', 'c'], "
-        "provides=['ab', 'a_minus_ab', 'abs_a_minus_ab_cubed', 'cab'], x4 ops: "
-        "mul1, sub1, abspow1, mul2)"
+    weekday = compose(
+        "weekday",
+        operation(
+            lambda t: (t[:-1], t[-1:]),
+            name="work!",
+            needs="tasks",
+            provides=["tasks done", "todos"],
+        ),
+        operation(str, name="sleep"),
+        weekday,
     )
+    assert len(weekday.ops) == 3
+
+    weekday = compose("weekday", NULL_OP("sleep"), weekday)
+    assert len(weekday.ops) == 2
+
+    weekdays = [weekday.withset(name=f"day {i}") for i in range(days_count)]
+    week = compose("week", *weekdays, nest=True)
+    assert len(week.ops) == 6
+
+    def rename_predicate(node):
+        if node not in ("backlog", "tasks done", "todos"):
+            return True
+
+    week = compose("week", *weekdays, nest=rename_predicate)
+    assert len(week.ops) == 6
+    sol = week.compute({"backlog": "a lot!"})
+    assert sol == {
+        "backlog": "a lot!",
+        "day 0.tasks": "a lot!",
+        "tasks done": "a lot",
+        "todos": "!",
+        "day 1.tasks": "a lot!",
+        "day 2.tasks": "a lot!",
+    }
+
+    dot = sol.plot()
+    assert len(dot.get_subgraphs()) == days_count
 
 
 def test_aliases(exemethod):
@@ -617,7 +647,7 @@ def test_pruning_multiouts_not_override_intermediates2(exemethod):
     solution = pipeline.compute(inputs, "asked")
     assert solution == filtdict(exp, "asked")
     assert solution.overwrites == {}
-    # ... but overrites collected if asked.
+    # ... but overwrites collected if asked.
     #
     solution = pipeline.compute(inputs, ["asked", "overridden"])
     assert solution == filtdict(exp, "asked", "overridden")
@@ -1183,7 +1213,7 @@ def test_sideffecteds_endured(calc_prices_pipeline):
         raise ValueError("EC transactions have no VAT!")
 
     calc_prices_pipeline = compose(
-        calc_prices_pipeline.name, fill_in_vat_ratios, calc_prices_pipeline, merge=True
+        calc_prices_pipeline.name, fill_in_vat_ratios, calc_prices_pipeline, nest=False
     )
 
     sol = calc_prices_pipeline.compute(
@@ -1500,7 +1530,7 @@ def test_parallel_execution(exemethod):
         operation(name="e", needs=["ao", "bo"], provides="eo")(fn2),
         operation(name="f", needs="eo", provides="fo")(fn),
         operation(name="g", needs="fo", provides="go")(fn),
-        merge=True,
+        nest=False,
     )
 
     t0 = time.time()
@@ -1542,7 +1572,7 @@ def test_multi_threading_computes():
         operation(name="op_a", needs=["a", "b"], provides="c")(op_a),
         operation(name="op_b", needs=["c", "b"], provides="d")(op_b),
         operation(name="op_c", needs=["a", "b"], provides="e")(op_c),
-        merge=True,
+        nest=False,
     )
 
     def infer(i):
@@ -1562,7 +1592,7 @@ def test_multi_threading_computes():
 
 
 @pytest.mark.parametrize("bools", range(4))
-def test_compose_another_network(exemethod, bools):
+def test_combine_networks(exemethod, bools):
     # Code from `compose.rst` examples
     if not exemethod:
         return
@@ -1589,6 +1619,7 @@ def test_compose_another_network(exemethod, bools):
             name="sub2", needs=["a_minus_ab", "c"], provides="a_minus_ab_minus_c"
         )(sub),
         parallel=parallel2,
+        nest=lambda n: isinstance(n, Operation),
     )
     ## Ensure all old-nodes were prefixed.
     #

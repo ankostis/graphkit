@@ -5,14 +5,14 @@
 import logging
 import re
 from collections import abc
-from typing import Any, Callable, Collection, List, Mapping
+from typing import Any, Callable, Collection, List, Mapping, Union
 
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
 
 from .base import UNSET, Items, PlotArgs, Plottable, aslist, astuple, jetsam
 from .config import is_debug, reset_abort
-from .modifiers import optional, sideffect
+from .modifiers import optional, sideffect, rename_dependency
 from .network import ExecutionPlan, Network, NodePredicate, Solution, yield_ops
 from .op import FunctionalOperation, NULL_OP, Operation, reparse_operation_data
 
@@ -33,19 +33,20 @@ def _make_network(
     endured=None,
     parallel=None,
     marshalled=None,
-    merge=None,
+    nest=None,
     node_props=None,
 ):
     def proc_op(op, parent=None):
         """clone FuncOperation with certain props changed"""
         assert isinstance(op, FunctionalOperation), op
 
+        nest_is_callable = callable(nest)
         ## Convey any node-props specified in the netop here
         #  to all sub-operations.
         #
         if (
             node_props
-            or (not merge and parent)
+            or (nest and (parent or nest_is_callable))
             or rescheduled is not None
             or endured is not None
             or parallel is not None
@@ -65,11 +66,28 @@ def _make_network(
                 op_node_props = op.node_props.copy()
                 op_node_props.update(node_props)
                 kw["node_props"] = op_node_props
-            ## If `merge` asked, leave original `name` to deduplicate operations,
-            #  otherwise rename the op by prefixing them with their parent netop.
+
+            ## If `nest`, rename the op & data (predicated by `nest`)
+            #  by prefixing them with their parent netop.
             #
-            if not merge and parent:
+            if nest and (parent or nest_is_callable):
+
+                def renamer(name):
+                    prefixed = f"{parent}.{name}"
+                    if nest_is_callable:
+                        new_name = nest(name)
+                        if new_name in (True, False, None):
+                            new_name = prefixed if new_name else name
+                    else:
+                        new_name = prefixed if nest else name
+
+                    return new_name
+
+                # TODO: DROP op.parent; name actually decides nesting.
                 kw["parents"] = (parent,) + (op.parents or ())
+                kw["needs"] = [rename_dependency(n, renamer) for n in op.needs]
+                kw["provides"] = [rename_dependency(n, renamer) for n in op.provides]
+
             op = op.withset(**kw)
 
         return op
@@ -120,7 +138,7 @@ class NetworkOperation(Operation, Plottable):
         endured=None,
         parallel=None,
         marshalled=None,
-        merge=None,
+        nest=None,
         node_props=None,
     ):
         """
@@ -139,7 +157,7 @@ class NetworkOperation(Operation, Plottable):
 
         # Prune network
         self.net = _make_network(
-            operations, rescheduled, endured, parallel, marshalled, merge, node_props
+            operations, rescheduled, endured, parallel, marshalled, nest, node_props
         )
         self.name, self.needs, self.provides = reparse_operation_data(
             self.name, self.net.needs, self.net.provides
@@ -162,7 +180,7 @@ class NetworkOperation(Operation, Plottable):
 
     @property
     def ops(self) -> List[Operation]:
-        """All :term:`operation`\\s contained."""
+        """A new list with all :term:`operation`\\s contained in the :term:`network`."""
         return list(yield_ops(self.net.graph))
 
     def withset(
@@ -388,12 +406,15 @@ def compose(
     endured=None,
     parallel=None,
     marshalled=None,
-    merge=False,
+    nest: Union[Callable[[str], str], Union[bool, str]] = None,
     node_props=None,
 ) -> NetworkOperation:
     """
     Composes a collection of operations into a single computation graph,
-    obeying the ``merge`` property, if set in the constructor.
+    obeying the ``nest`` property, if set in the constructor.
+
+    Operations given earlier (further to the left) override those following
+    (further to the right), similar to `set` behavior (and contrary to `dict`).
 
     :param str name:
         A optional name for the graph being composed by this object.
@@ -402,17 +423,17 @@ def compose(
     :param operations:
         Each argument should be an operation instance created using
         ``operation``.
-    :param bool merge:
-        If ``True``, this compose object will attempt to merge together
-        ``operation`` instances that represent entire computation graphs.
-        Specifically, if one of the ``operation`` instances passed to this
-        ``compose`` object is itself a graph operation created by an
-        earlier use of ``compose`` the sub-operations in that graph are
-        compared against other operations passed to this ``compose``
-        instance (as well as the sub-operations of other graphs passed to
-        this ``compose`` instance).  If any two operations are the same
-        (based on name), then that operation is computed only once, instead
-        of multiple times (one for each time the operation appears).
+    :param nest:
+        - If false (default), applies :term:`operation merging`;
+        - if true, applies :term:`operation nesting` to all nodes (ops + data);
+        - if it is :func:`.callable`, it is given each node before merging to decide
+          its new name, or if it should be prefixed by the parent pipeline (or not)
+          by returning one of ``(str, None, True, False)``.
+
+          For example, to nest just the operations, call::
+
+              compose(..., nest=lambda n: isinstance(n, Operation))
+
     :param rescheduled:
         applies :term:`reschedule`\\d to all contained `operations`
     :param endured:
@@ -438,7 +459,6 @@ def compose(
     operations = (op1,) + operations
     if not all(isinstance(op, Operation) for op in operations):
         raise TypeError(f"Non-Operation instances given: {operations}")
-
     return NetworkOperation(
         operations,
         name,
@@ -447,6 +467,6 @@ def compose(
         endured=endured,
         parallel=parallel,
         marshalled=marshalled,
-        merge=merge,
+        nest=nest,
         node_props=node_props,
     )
