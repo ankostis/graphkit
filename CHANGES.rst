@@ -86,14 +86,19 @@ Changelog
 %%%%%%%%%
 
 
-v7.1.1 (5 May 2020, @ankostis): minor reschedule fixes and refactoring
-----------------------------------------------------------------------
+v7.1.2 (6 May 2020, @ankostis): minor reschedule fixes and refactoring
+======================================================================
+Actually it contains just what was destined for v7.1.1.
+
 + FIX(op): v7.0.0 promise that ``op.__call__`` delegates to ``compute()`` was a fake;
   now it is fixed.
 + fix(config): endurance flags were miss-behaving.
 + refact(net): factor out a :meth:`._reschedule()` method for both endurance & rescheduled ops.
 + feat(build): +script to launch pytest on a local clone repo before pushing.
 
+v7.1.1 (5 May 2020, @ankostis): canceled, by mistake contained features for 8.x
+--------------------------------------------------------------------------------
+(removed from PyPi/RTD, new features by mistake were removed from v7.1.2)
 
 
 v7.1.0 (4 May 2020, @ankostis): Cancelable sideffects, theme-ize & expand everything
