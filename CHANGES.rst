@@ -86,6 +86,20 @@ Changelog
 %%%%%%%%%
 
 
+v8.1.0 (7 May 2020, @ankostis): drop last plan, purify base
+===========================================================
++ DROP(pipeline): After solution class was introduced, ``last_plan`` attribute was redundant.
++ REFACT: move :class:`.Plottable` from :mod:`.base` --> :mod:`.composition`.
++ REFACT: eliminate dependencies of :mod:`.plot` & :mod:`.sphinxext` --> :mod:`.execution`.
++ FIX(plot): updated Legend, which had become outdated since v6+.
++ ENH(op): Rename & Nest operations with dictionary or callable.
++ enh(pipe): accept a dictionary with renames when doing :term:`operation nesting`
+  (instead of callables or truthies).
++ refact(op): force abstract :class:`.Operation` to be :class:`.Plottable`.
++ fix(modifiers): `dep_renamed()` was faking sideffect-renaming only on repr().
++ enh(modifiers): add :attr:`._Modifier.cmd` with code to reproduce modifier.
+
+
 v8.0.2 (7 May 2020, @ankostis): re-MODULE; sideffect --> sfx; all DIACRITIC Modifiers; invert "merge" meaning
 =============================================================================================================
 **--((superseded immediately v8.0.1 & v8.0.2 with more restructurings)))--**
