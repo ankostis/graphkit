@@ -89,9 +89,7 @@ def test_builder_pattern():
     op = opb.withset(needs=["a", "b"])
     assert isinstance(op, FunctionalOperation)
     assert str(op) == "FunctionalOperation(name=None, needs=['a', 'b'], fn=None)"
-    with pytest.raises(
-        ValueError, match=f"Operation was not yet provided with a callable `fn`!"
-    ):
+    with pytest.raises(ValueError, match=f"Operation must have a callable `fn` and"):
         op.compute({})
 
     op = op.withset(provides="SUM", fn=sum, name=None)
