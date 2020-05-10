@@ -540,6 +540,8 @@ to enact the following:
    From code you may wrap the code you are interested in with :func:`.config.debug_enabled`
    "context-manager", to get augmented print-outs for selected code-paths only.
 
+.. _jetsam:
+
 Jetsam on exceptions
 ^^^^^^^^^^^^^^^^^^^^
 Additionally, when some operation fails, the original exception gets annotated

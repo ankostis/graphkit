@@ -171,8 +171,8 @@ def func_name(
         'graphtik.base.func_name'
         >>> func_name(func_name.__format__, fqdn=0)
         '__format__'
-        >>> func_name(MultiValueError.__format__, fqdn=1)
-        'object.__format__'
+        >>> func_name(func_name.__format__, fqdn=1)
+        'function.__format__'
 
     Even functions defined in docstrings are reported:
 

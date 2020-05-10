@@ -528,6 +528,11 @@ Architecture
         allowing to "force" all operations, when they are not set to the ``None``
         value.  All of them default to ``None`` (false).
 
+    jetsam
+        When operations fail, the original exception gets annotated with salvaged
+        values from ``locals()`` and raised intact.
+
+        See :ref:`jetsam`.
 
 .. default-role:: obj
 .. |v440-flowchart| raw:: html
