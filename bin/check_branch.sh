@@ -5,5 +5,5 @@
 # Run it in a cloned repo to clean-test recent master
 
 my_dir=`dirname "$0"`
-de "$my_dir/.."
+cd "$my_dir/.."
 rm -rf build/* && git fetch origin && git reset --hard origin/${1:-master} && pytest
