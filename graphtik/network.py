@@ -24,7 +24,7 @@ from boltons.setutils import IndexedSet as iset
 from .base import Items, astuple, jetsam
 from .config import is_debug, is_skip_evictions
 from .modifiers import dep_renamed, is_mapped, is_optional, is_sfx, optional
-from .composition import FunctionalOperation, Operation, PlotArgs, RenArgs, Plottable
+from .op import FunctionalOperation, Operation, PlotArgs, Plottable, RenArgs
 
 NodePredicate = Callable[[Any, Mapping], bool]
 
@@ -628,8 +628,7 @@ def build_network(
         k: v for k, v in locals().items() if v is not None and k not in ("operations")
     }
 
-    from boltons.setutils import IndexedSet as iset
-    from .composition import NULL_OP, Pipeline
+    from .pipeline import NULL_OP, Pipeline
 
     def proc_op(op, parent=None):
         """clone FuncOperation with certain props changed"""

@@ -21,12 +21,6 @@ from graphtik import (
     vararg,
     varargs,
 )
-from graphtik.composition import (
-    FunctionalOperation,
-    Operation,
-    as_renames,
-    reparse_operation_data,
-)
 from graphtik.config import (
     operations_endured,
     operations_reschedullled,
@@ -35,6 +29,12 @@ from graphtik.config import (
 )
 from graphtik.modifiers import dep_renamed
 from graphtik.network import yield_ops
+from graphtik.op import (
+    FunctionalOperation,
+    Operation,
+    as_renames,
+    reparse_operation_data,
+)
 
 
 @pytest.fixture(params=[None, "got"])

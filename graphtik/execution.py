@@ -22,8 +22,6 @@ from .base import (
     first_solid,
     jetsam,
 )
-from .composition import Operation, PlotArgs, Plottable
-
 from .config import (
     get_execution_pool,
     is_abort,
@@ -41,6 +39,7 @@ from .network import (
     yield_node_names,
     yield_ops,
 )
+from .op import Operation, PlotArgs, Plottable
 
 #: If this logger is *eventually* DEBUG-enabled,
 #: the string-representation of network-objects (network, plan, solution)

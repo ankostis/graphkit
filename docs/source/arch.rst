@@ -36,8 +36,8 @@ Architecture
 
         .. autosummary::
 
-            graphtik.composition.FunctionalOperation
-            graphtik.composition.Pipeline
+            graphtik.op.FunctionalOperation
+            graphtik.pipeline.Pipeline
             graphtik.network.Network
             graphtik.execution.ExecutionPlan
             graphtik.execution.Solution

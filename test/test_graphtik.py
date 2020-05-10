@@ -23,15 +23,6 @@ import pytest
 
 from graphtik import network
 from graphtik.base import AbortedException, IncompleteExecutionError
-from graphtik.composition import (
-    NO_RESULT,
-    NO_RESULT_BUT_SFX,
-    NULL_OP,
-    Pipeline,
-    Operation,
-    compose,
-    operation,
-)
 from graphtik.config import (
     abort_run,
     debug_enabled,
@@ -44,7 +35,9 @@ from graphtik.config import (
     tasks_marshalled,
 )
 from graphtik.execution import Solution
-from graphtik.modifiers import optional, sfx, sfxed, vararg, dep_renamed
+from graphtik.modifiers import dep_renamed, optional, sfx, sfxed, vararg
+from graphtik.op import NO_RESULT, NO_RESULT_BUT_SFX, Operation, operation
+from graphtik.pipeline import NULL_OP, Pipeline, compose
 
 log = logging.getLogger(__name__)
 

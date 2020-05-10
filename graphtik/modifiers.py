@@ -7,7 +7,7 @@ The `needs` and `provides` annotated with *modifiers* designate, for instance,
 :term:`optional <optionals>` function arguments, or "ghost" :term:`sideffects`.
 
 .. note::
-    This module (along with :mod:`.composition`) is what client code needs
+    This module (along with :mod:`.op` & :mod:`.pipeline`) is what client code needs
     to define pipelines *on import time* without incurring a heavy price
     (~7ms on a 2019 fast PC)
 """
