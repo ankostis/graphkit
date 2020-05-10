@@ -482,7 +482,9 @@ class Operation(Plottable, abc.ABC):
 
     name: str
     needs: Items
+    op_needs: Items
     provides: Items
+    op_provides: Items
 
     @property
     def __name__(self) -> str:
