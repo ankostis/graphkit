@@ -11,10 +11,10 @@ For :ref:`debugging` it is necessary to visualize the graph-operation.
 You may plot any :term:`plottable` and annotate on top the *execution plan* and
 solution of the last computation, calling methods with arguments like this::
 
-   netop.plot(True)                   # open a matplotlib window
-   netop.plot("netop.svg")            # other supported formats: png, jpg, pdf, ...
-   netop.plot()                       # without arguments return a pydot.DOT object
-   netop.plot(solution=solution)      # annotate graph with solution values
+   pipeline.plot(True)                   # open a matplotlib window
+   pipeline.plot("pipeline.svg")            # other supported formats: png, jpg, pdf, ...
+   pipeline.plot()                       # without arguments return a pydot.DOT object
+   pipeline.plot(solution=solution)      # annotate graph with solution values
    solution.plot()                    # plot solution only
 
 ... or for the last ...::
@@ -53,7 +53,7 @@ Internally it delegates to :meth:`.ExecutionPlan.plot()` of the plan.
 attribute, which *caches* the last run to facilitate debugging.
 If you want the bare-bone diagram, plot the network::
 
-   netop.net.plot(...)
+   pipeline.net.plot(...)
 
 If you want all details, plot the solution::
 
@@ -80,7 +80,7 @@ as SVG images.
 
 You may increase the height of the SVG cell output with something like this::
 
-      netop.plot(jupyter_render={"svg_element_styles": "height: 600px; width: 100%"})
+      pipeline.plot(jupyter_render={"svg_element_styles": "height: 600px; width: 100%"})
 
 See :data:`.default_jupyter_render` for those defaults and recommendations.
 
@@ -132,18 +132,18 @@ ordered by breadth of the effects (most broadly effecting method at the top):
 
 3. Pass `theme` or `plotter` arguments when calling :meth:`.Plottable.plot()`::
 
-      netop.plot(plotter=Plotter(kw_legend=None))
-      netop.plot(theme=Theme(include_steps=True)
+      pipeline.plot(plotter=Plotter(kw_legend=None))
+      pipeline.plot(theme=Theme(include_steps=True)
 
    You may clone and customize an existing plotter, to preserve any pre-existing
    customizations::
 
       active_plotter = get_active_plotter()
-      netop.plot(theme={"include_steps": True})
+      pipeline.plot(theme={"include_steps": True})
 
    ... OR::
 
-      netop.plot(plotter=active_plotter.with_styles(kw_legend=None))
+      pipeline.plot(plotter=active_plotter.with_styles(kw_legend=None))
 
    You may create a new class to override Plotter's methods that way.
 
@@ -293,14 +293,14 @@ Directives
    .. rst:directive:option:: name: link target id
       :type: `str`
 
-      Make this netop a hyperlink target identified by this name.
+      Make this pipeline a hyperlink target identified by this name.
       If :name: given and no :caption: given, one is created out of this,
       to act as a permalink.
 
    .. rst:directive:option:: caption: figure's caption
       :type: `str`
 
-      Text to put underneath the netop.
+      Text to put underneath the pipeline.
 
    .. rst:directive:option:: alt
       :type: `str`
@@ -502,9 +502,9 @@ like the ``(3C40)`` & ``(8697)`` below, important for when running pipelines
 in :term:`parallel`::
 
    --------------------- Captured log call ---------------------
-   DEBUG    === Compiling netop(t)...
+   DEBUG    === Compiling pipeline(t)...
    DEBUG    ... cache-updated key: ((), None, None)
-   DEBUG    === (3C40) Executing netop(t), in parallel, on inputs[], according to ExecutionPlan(needs=[], provides=['b'], x2 steps: op1, op2)...
+   DEBUG    === (3C40) Executing pipeline(t), in parallel, on inputs[], according to ExecutionPlan(needs=[], provides=['b'], x2 steps: op1, op2)...
    DEBUG    +++ (3C40) Parallel batch['op1'] on solution[].
    DEBUG    +++ (3C40) Executing OpTask(FunctionalOperation|(name='op1', needs=[], provides=[sfx: 'b'], fn{}='<lambda>'), sol_keys=[])...
    INFO     graphtik.composition:op.py:534 Results[sfx: 'b'] contained +1 unknown provides[sfx: 'b']
@@ -513,9 +513,9 @@ in :term:`parallel`::
 
    ...
 
-   DEBUG    === Compiling netop(t)...
+   DEBUG    === Compiling pipeline(t)...
    DEBUG    ... cache-hit key: ((), None, None)
-   DEBUG    === (8697) Executing netop(t), evicting, on inputs[], according to ExecutionPlan(needs=[], provides=['b'], x3 steps: op1, op2, sfx: 'b')...
+   DEBUG    === (8697) Executing pipeline(t), evicting, on inputs[], according to ExecutionPlan(needs=[], provides=['b'], x3 steps: op1, op2, sfx: 'b')...
    DEBUG    +++ (8697) Executing OpTask(FunctionalOperation(name='op1', needs=[], provides=[sfx: 'b'], fn{}='<lambda>'), sol_keys=[])...
    INFO     graphtik.composition:op.py:534 Results[sfx: 'b'] contained +1 unknown provides[sfx: 'b']
    FunctionalOperation(name='op1', needs=[], provides=[sfx: 'b'], fn{}='<lambda>')
@@ -523,7 +523,7 @@ in :term:`parallel`::
    DEBUG    +++ (8697) Executing OpTask(FunctionalOperation(name='op2', needs=[sfx: 'b'], provides=['b'], fn='<lambda>'), sol_keys=[sfx: 'b'])...
    DEBUG    ... (8697) op(op2) completed in 0.08ms.
    DEBUG    ... (8697) evicting 'sfx: 'b'' from solution[sfx: 'b', 'b'].
-   DEBUG    === (8697) Completed netop(t) in 0.229ms.
+   DEBUG    === (8697) Completed pipeline(t) in 0.229ms.
 
 
 ``DEBUG`` flag

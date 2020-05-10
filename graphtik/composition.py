@@ -208,7 +208,7 @@ class Plottable(abc.ABC):
             the :term:`plottable` that ordered the plotting.
             Automatically set downstreams to one of::
 
-                op | netop | net | plan | solution | <missing>
+                op | pipeline | net | plan | solution | <missing>
 
             :seealso: :attr:`.PlotArgs.plottable`
         :param plotter:
@@ -1500,7 +1500,7 @@ class Pipeline(Operation, Plottable):
         instances of this class.
     """
 
-    #: The name for the new netop, used when nesting them.
+    #: The name for the new pipeline, used when nesting them.
     name = None
     #: Will prune `net` against these possible outputs when :meth:`compute()` called.
     outputs = None
@@ -1600,7 +1600,7 @@ class Pipeline(Operation, Plottable):
             Will be stored and applied on the next :meth:`compute()` or :meth:`compile()`.
             If not given, the value of this instance is conveyed to the clone.
         :param name:
-            the name for the new netop:
+            the name for the new pipeline:
 
             - if `None`, the same name is kept;
             - if True, a distinct name is  devised::
@@ -1621,7 +1621,7 @@ class Pipeline(Operation, Plottable):
             see respective parameter in :meth:`.FunctionalOperation.withset()`.
 
         :return:
-            A narrowed netop clone, which **MIGHT be empty!***
+            A narrowed pipeline clone, which **MIGHT be empty!***
 
         :raises ValueError:
             - If `outputs` asked do not exist in network, with msg:
@@ -1778,7 +1778,7 @@ class Pipeline(Operation, Plottable):
             predicate = self.predicate if predicate == UNSET else predicate
 
             # Build the execution plan.
-            log.debug("=== Compiling netop(%s)...", self.name)
+            log.debug("=== Compiling pipeline(%s)...", self.name)
             plan = net.compile(named_inputs.keys(), outputs, predicate)
 
             # Restore `abort` flag for next run.
@@ -1840,7 +1840,7 @@ def compose(
         each argument should be an operation or pipeline instance
     :param nest:
         a dictionary or callable corresponding to the `renamer` paremater
-        of :meth:`.NetOperation.withset()`, but the calable receives a `ren_args`
+        of :meth:`.Pipeline.withset()`, but the calable receives a `ren_args`
         with :attr:`RenArgs.parent` set when merging a pipeline, and applies
         the default nesting behavior (:func:`.nest_any_node()`) on truthies.
 

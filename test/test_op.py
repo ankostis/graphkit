@@ -284,13 +284,13 @@ def _collect_op_props(pipe):
     }
 
 
-def test_netop_node_props():
+def test_pipeline_node_props():
     op1 = operation(lambda: None, name="a", node_props={"a": 11, "b": 0, "bb": 2})
     op2 = operation(lambda: None, name="b", node_props={"a": 3, "c": 4})
-    netop = compose("n", op1, op2, node_props={"bb": 22, "c": 44})
+    pipeline = compose("n", op1, op2, node_props={"bb": 22, "c": 44})
 
     exp = {"a": {"a": 11, "b": 0, "bb": 22, "c": 44}, "b": {"a": 3, "bb": 22, "c": 44}}
-    node_props = _collect_op_props(netop)
+    node_props = _collect_op_props(pipeline)
     assert node_props == exp
 
     # Check node-prop sideffects are not modified
@@ -299,25 +299,29 @@ def test_netop_node_props():
     assert op2.node_props == {"a": 3, "c": 4}
 
 
-def test_netop_merge_node_props():
+def test_pipeline_merge_node_props():
     op1 = operation(lambda: None, name="a", node_props={"a": 1})
-    netop1 = compose("n1", op1)
+    pipeline1 = compose("n1", op1)
     op2 = operation(lambda: None, name="a", node_props={"a": 11, "b": 0, "bb": 2})
     op3 = operation(lambda: None, name="b", node_props={"a": 3, "c": 4})
-    netop2 = compose("n2", op2, op3)
+    pipeline2 = compose("n2", op2, op3)
 
-    netop = compose("n", netop1, netop2, node_props={"bb": 22, "c": 44}, nest=False)
+    pipeline = compose(
+        "n", pipeline1, pipeline2, node_props={"bb": 22, "c": 44}, nest=False
+    )
     exp = {"a": {"a": 1, "bb": 22, "c": 44}, "b": {"a": 3, "bb": 22, "c": 44}}
-    node_props = _collect_op_props(netop)
+    node_props = _collect_op_props(pipeline)
     assert node_props == exp
 
-    netop = compose("n", netop1, netop2, node_props={"bb": 22, "c": 44}, nest=True)
+    pipeline = compose(
+        "n", pipeline1, pipeline2, node_props={"bb": 22, "c": 44}, nest=True
+    )
     exp = {
         "n1.a": {"a": 1, "bb": 22, "c": 44},
         "n2.a": {"a": 11, "b": 0, "bb": 22, "c": 44},
         "n2.b": {"a": 3, "bb": 22, "c": 44},
     }
-    node_props = _collect_op_props(netop)
+    node_props = _collect_op_props(pipeline)
     assert node_props == exp
 
 
@@ -490,9 +494,9 @@ def test_reschedule_outputs():
 
 
 @pytest.mark.parametrize("attr, value", [("outputs", [1]), ("predicate", lambda: None)])
-def test_netop_narrow_attributes(attr, value):
-    netop = compose("1", operation(str, name="op1"))
-    assert getattr(netop.withset(**{attr: value}), attr) == value
+def test_pipeline_narrow_attributes(attr, value):
+    pipeline = compose("1", operation(str, name="op1"))
+    assert getattr(pipeline.withset(**{attr: value}), attr) == value
 
 
 _attr_values = [
@@ -526,7 +530,7 @@ def test_op_withset_conveys_attr(attr, value):
 
 
 @pytest.mark.parametrize("attr, value", _attr_values)
-def test_netop_conveys_attr_to_ops(attr, value):
+def test_pipeline_conveys_attr_to_ops(attr, value):
     def _opsattrs(ops, attr, value):
         vals = [getattr(op, attr) for op in ops if isinstance(op, Operation)]
         assert all(v == value for v in vals)

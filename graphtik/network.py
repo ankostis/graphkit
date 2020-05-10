@@ -635,7 +635,7 @@ def build_network(
         """clone FuncOperation with certain props changed"""
         assert isinstance(op, FunctionalOperation), op
 
-        ## Convey any node-props specified in the netop here
+        ## Convey any node-props specified in the pipeline here
         #  to all sub-operations.
         #
         if kw:

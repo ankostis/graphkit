@@ -1,12 +1,12 @@
 1. `graphtik` with :graphvar:
 =============================
 .. graphtik::
-    :graphvar: netop1
+    :graphvar: pipeline1
 
     >>> from graphtik import compose, operation
 
-    >>> netop1 = compose(
-    ...     "test_netop1",
+    >>> pipeline1 = compose(
+    ...     "pipeline1",
     ...     operation(name="op1", needs=["a", "b"], provides="aa")(lambda a, b: [a, b]),
     ... )
 
@@ -14,20 +14,20 @@
 2. Solved `graphtik` WITHOUT :graphvar:
 =======================================
 .. graphtik::
-    :caption: Solved *netop2* with ``a=1``, ``b=2``
+    :caption: Solved *pipeline2* with ``a=1``, ``b=2``
 
-    >>> netop2 = compose(
-    ...     "test_netop2",
+    >>> pipeline2 = compose(
+    ...     "pipeline2",
     ...     operation(name="op1", needs=["a", "b"], provides="aa")(lambda a, b: [a, b]),
     ... )
-    >>> sol = netop2(a=1, b=2)
+    >>> sol = pipeline2(a=1, b=2)
 
 
 3. `graphtik` inherit from literal-block WITHOUT :graphvar:
 ===========================================================
 
->>> netop3 = compose(
-...     "test_netop3",
+>>> pipeline3 = compose(
+...     "pipeline3",
 ...     operation(name="op1", needs=["a", "b"], provides="aa")(lambda a, b: [a, b]),
 ... )
 
@@ -37,19 +37,19 @@
 4. `graphtik` inherit from doctest-block with :graphvar:
 ========================================================
 
->>> netop4 = compose(
-...     "test_netop4",
+>>> pipeline4 = compose(
+...     "pipeline4",
 ...     operation(name="op1", needs=["a", "b"], provides="aa")(lambda a, b: [a, b]),
 ... )
 
 .. graphtik::
-    :graphvar: netop4
+    :graphvar: pipeline4
 
 
 5. Image for :hide:
 ===================
 .. graphtik::
-    :graphvar: netop1
+    :graphvar: pipeline1
     :hide:
     :zoomable: false
 
@@ -57,7 +57,7 @@
 6. Nothing for :skipif:
 =======================
 .. graphtik::
-    :graphvar: netop1
+    :graphvar: pipeline1
     :skipif: True
 
 
@@ -67,8 +67,8 @@
 .. graphtik::
     :zoomable:
 
-    >>> netop5 = compose(
-    ...     "test_netop1",
+    >>> pipeline5 = compose(
+    ...     "pipeline1",
     ...     operation(name="op1", needs="a", provides="aa")(lambda a: a),
     ...     operation(name="op2", needs=["aa", "b"], provides="res")(lambda x, y: [x, y]),
     ... )
@@ -82,12 +82,12 @@ Check order of doctest-globals even if item pre-exists:
     :zoomable-opts: {}
 
     >>> from graphtik import compose, operation
-    >>> netop1 = compose(
-    ...     "test_netop1",
+    >>> pipeline1 = compose(
+    ...     "pipeline1",
     ...     operation(name="op1", needs=["a", "b"], provides="aa")(lambda a, b: [a, b])
     ... )
-    >>> netop2 = compose(
-    ...     "test_netop2",
+    >>> pipeline2 = compose(
+    ...     "pipeline2",
     ...     operation(name="op1", needs=["a", "b"], provides="aa")(lambda a, b: [a, b])
     ... )
 
@@ -97,12 +97,12 @@ Check order of doctest-globals even if item pre-exists:
 .. graphtik::
 
     >>> from graphtik import compose, operation
-    >>> netop1 = compose(
-    ...     "test_netopA",
+    >>> pipeline1 = compose(
+    ...     "pipelineA",
     ...     operation(name="op1", needs=["A", "b"], provides="aa")(lambda a, b: [a, b])
     ... )
 
-    >>> netop2 = compose(
-    ...     "test_netopB",
+    >>> pipeline2 = compose(
+    ...     "pipelineB",
     ...     operation(name="op1", needs=["a", "B"], provides="aa")(lambda a, b: [a, b])
     ... )

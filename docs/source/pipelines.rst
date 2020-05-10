@@ -277,8 +277,8 @@ of the operation.
     ... def read_book(for_how_long):
     ...     return "relaxed"
 
-    >>> netop = compose("covid19", get_out, stay_home, exercise, read_book)
-    >>> netop
+    >>> pipeline = compose("covid19", get_out, stay_home, exercise, read_book)
+    >>> pipeline
     Pipeline('covid19',
                      needs=['space', 'time'],
                      provides=['space', 'time', 'fun'],
@@ -291,7 +291,7 @@ Notice the thick outlines of the endured (or :term:`reschedule`\d, see below) op
 When executed, the pipeline produced :term:`outputs`, although one of its operations
 has failed:
 
-    >>> sol = netop()
+    >>> sol = pipeline()
     >>> sol
     {'time': '1h', 'fun': 'relaxed'}
 
@@ -338,17 +338,17 @@ actual `provides` delivered:
     ... def read_book(for_how_long):
     ...     return "relaxed", "popular physics"
 
-    >>> netop = compose("covid19", get_out_or_stay_home, exercise, read_book)
+    >>> pipeline = compose("covid19", get_out_or_stay_home, exercise, read_book)
 
 Depending on "quarantine' state we get to execute different part of the pipeline:
 
 .. graphtik::
 
-    >>> sol = netop(quarantine=True)
+    >>> sol = pipeline(quarantine=True)
 
 .. graphtik::
 
-    >>> sol = netop(quarantine=False)
+    >>> sol = pipeline(quarantine=False)
 
 
 In both case, a warning gets raised about the missing outputs, but the execution

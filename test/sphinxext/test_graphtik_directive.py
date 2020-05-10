@@ -93,14 +93,14 @@ def test_html(make_app, app_params, img_format, cached_etree_parse):
         f".//{tag}",
         attr_check(
             "alt",
-            "test_netop1",
+            "pipeline1",
             r"'aa': \[1, 2\]",
-            "test_netop3",
-            "test_netop4",
-            "test_netop1",
-            "test_netop1",  # different graph!
-            "test_netop2",  # only the last of the 2 graphs
-            "test_netopB",  # only the last of the 2 graphs
+            "pipeline3",
+            "pipeline4",
+            "pipeline1",
+            "pipeline1",  # different graph!
+            "pipeline2",  # only the last of the 2 graphs
+            "pipelineB",  # only the last of the 2 graphs
             count=True,
         ),
     )

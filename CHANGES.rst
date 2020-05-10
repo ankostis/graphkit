@@ -25,7 +25,7 @@ Graphtik Changelog
   =====
   - [+] jetsam tasks
   - [+] narrowed() --> withset()
-  - [+] reset abort on new `netop.compute()`
+  - [+] reset abort on new `pipeline.compute()`
   - [+] raise if rescheduled/endured ops
   - [+] define sideffects on target "sideffected" needs
   - [+] Operations behave like a regular decorator when fn given in 1st call.

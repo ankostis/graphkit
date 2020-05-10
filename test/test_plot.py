@@ -29,7 +29,7 @@ from graphtik.plot import (
 @pytest.fixture
 def pipeline():
     return compose(
-        "netop",
+        "pipeline",
         operation(name="add", needs=["a", "b1"], provides=["ab1"])(add),
         operation(name="sub", needs=["a", optional("b2")], provides=["ab2"])(
             lambda a, b=1: a - b
@@ -256,24 +256,24 @@ def test_plotters_hierarchy(pipeline: Pipeline, inputs, outputs):
     sol = pipeline.compute(inputs, outputs)
 
     # Plotting of pipeline must remains the same.
-    netop_dot = str(pipeline.plot(inputs=inputs, outputs=outputs))
-    assert netop_dot == base_dot
+    pipeline_dot = str(pipeline.plot(inputs=inputs, outputs=outputs))
+    assert pipeline_dot == base_dot
 
     # Plotting plan alone has no label.
     plan_dot = str(sol.plan.plot(inputs=inputs, outputs=outputs))
     assert plan_dot
     assert plan_dot != base_dot
-    assert plan_dot != netop_dot
+    assert plan_dot != pipeline_dot
     assert f"digraph {pipeline.name} {{" not in str(plan_dot)  # graph-name
     assert f"label=<{pipeline.name}>;" not in str(plan_dot)  # graph-label
 
     # Plot a pipeline + solution, which must be different from all before.
-    sol_netop_dot = str(pipeline.plot(inputs=inputs, outputs=outputs, solution=sol))
-    assert sol_netop_dot != base_dot
-    assert sol_netop_dot != netop_dot
-    assert sol_netop_dot != plan_dot
-    assert f"digraph {pipeline.name} {{" in str(netop_dot)  # graph-name
-    assert f"label=<{pipeline.name}>;" in str(netop_dot)  # graph-label
+    sol_pipeline_dot = str(pipeline.plot(inputs=inputs, outputs=outputs, solution=sol))
+    assert sol_pipeline_dot != base_dot
+    assert sol_pipeline_dot != pipeline_dot
+    assert sol_pipeline_dot != plan_dot
+    assert f"digraph {pipeline.name} {{" in str(pipeline_dot)  # graph-name
+    assert f"label=<{pipeline.name}>;" in str(pipeline_dot)  # graph-label
 
     # Plot a solution, which must not equal anything so far.
     sol_dot = str(sol.plot())

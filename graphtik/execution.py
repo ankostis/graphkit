@@ -238,7 +238,7 @@ class Solution(ChainMap, Plottable):
         return {k: v for k, v in dd.items() if len(v) > 1}
 
     def check_if_incomplete(self) -> Optional[IncompleteExecutionError]:
-        """Return a :class:`IncompleteExecutionError` if `netop` operations failed/canceled. """
+        """Return a :class:`IncompleteExecutionError` if `pipeline` operations failed/canceled. """
         failures = {
             op: ex for op, ex in self.executed.items() if isinstance(ex, Exception)
         }
@@ -262,7 +262,7 @@ class Solution(ChainMap, Plottable):
             return IncompleteExecutionError(msg, self)
 
     def scream_if_incomplete(self):
-        """Raise a :class:`IncompleteExecutionError` if `netop` operations failed/canceled. """
+        """Raise a :class:`IncompleteExecutionError` if `pipeline` operations failed/canceled. """
         ex = self.check_if_incomplete()
         if ex:
             raise ex
@@ -713,7 +713,7 @@ class ExecutionPlan(
             )
 
             log.debug(
-                "=== (%s) Executing netop(%s)%s%s, on inputs%s, according to %s...",
+                "=== (%s) Executing pipeline(%s)%s%s, on inputs%s, according to %s...",
                 solution.solid,
                 name,
                 ", in parallel" if in_parallel else "",
@@ -732,7 +732,7 @@ class ExecutionPlan(
                 if _isDebugLogging():
                     elapsed = sum(solution.elapsed_ms.values())
                     log.debug(
-                        "=== (%s) Completed netop(%s) in %0.3fms.",
+                        "=== (%s) Completed pipeline(%s) in %0.3fms.",
                         solution.solid,
                         name,
                         elapsed,

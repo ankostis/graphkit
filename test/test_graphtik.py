@@ -176,7 +176,7 @@ def test_smoke_test():
     )
 
     # compose network
-    netop = compose("my network", sum_op1, mul_op1, pow_op1, sum_op2, sum_op3)
+    pipeline = compose("my network", sum_op1, mul_op1, pow_op1, sum_op2, sum_op3)
 
     #
     # Running the network
@@ -194,20 +194,20 @@ def test_smoke_test():
         "sum_ab_p3": 27.0,
         "sum_ab_times_b": 6,
     }
-    assert netop(a=1, b=2) == exp
+    assert pipeline(a=1, b=2) == exp
 
     # get specific outputs
     exp = {"sum_ab_times_b": 6}
-    assert netop.compute({"a": 1, "b": 2}, ["sum_ab_times_b"]) == exp
+    assert pipeline.compute({"a": 1, "b": 2}, ["sum_ab_times_b"]) == exp
 
     # start with inputs already computed
     exp = {"sum_ab_times_b": 2}
-    assert netop.compute({"sum_ab": 1, "b": 2}, ["sum_ab_times_b"]) == exp
+    assert pipeline.compute({"sum_ab": 1, "b": 2}, ["sum_ab_times_b"]) == exp
 
     with pytest.raises(ValueError, match="Unknown output node"):
-        netop.compute({"sum_ab": 1, "b": 2}, "bad_node")
+        pipeline.compute({"sum_ab": 1, "b": 2}, "bad_node")
     with pytest.raises(ValueError, match="Unknown output node"):
-        netop.compute({"sum_ab": 1, "b": 2}, ["b", "bad_node"])
+        pipeline.compute({"sum_ab": 1, "b": 2}, ["b", "bad_node"])
 
 
 def test_network_plan_execute():
@@ -564,7 +564,7 @@ def samplenet():
 
 
 def test_node_predicate_based_prune():
-    netop = compose(
+    pipeline = compose(
         "N",
         operation(name="A", needs=["a"], provides=["aa"], node_props={"color": "red"})(
             identity
@@ -580,16 +580,16 @@ def test_node_predicate_based_prune():
         )(addall),
     )
     inp = {"a": 1, "b": 2, "c": 3}
-    assert netop(**inp)["sum"] == 6
-    assert len(netop.net.graph.nodes) == 11
+    assert pipeline(**inp)["sum"] == 6
+    assert len(pipeline.net.graph.nodes) == 11
 
     pred = lambda n, d: d.get("color", None) != "red"
-    assert netop.withset(predicate=pred)(**inp)["sum"] == 5
-    assert len(netop.withset(predicate=pred).compile().dag.nodes) == 9
+    assert pipeline.withset(predicate=pred)(**inp)["sum"] == 5
+    assert len(pipeline.withset(predicate=pred).compile().dag.nodes) == 9
 
     pred = lambda n, d: "color" not in d
-    assert netop.withset(predicate=pred)(**inp)["sum"] == 3
-    assert len(netop.withset(predicate=pred).compile().dag.nodes) == 7
+    assert pipeline.withset(predicate=pred)(**inp)["sum"] == 3
+    assert len(pipeline.withset(predicate=pred).compile().dag.nodes) == 7
 
 
 def test_input_based_pruning():
@@ -662,17 +662,17 @@ def test_pruning_raises_for_bad_output(samplenet):
 
 
 def test_impossible_outputs():
-    netop = compose(
+    pipeline = compose(
         "test_net",
         operation(name="op1", needs=["a"], provides="aa")(identity),
         operation(name="op2", needs=["aa", "bb"], provides="aabb")(identity),
     )
     with pytest.raises(ValueError) as exinfo:
-        netop.compute({"a": 1,}, ["aabb"])
+        pipeline.compute({"a": 1,}, ["aabb"])
     assert exinfo.match("Unreachable outputs")
 
     with pytest.raises(ValueError) as exinfo:
-        netop.compute({"a": 1,}, ["aa", "aabb"])
+        pipeline.compute({"a": 1,}, ["aa", "aabb"])
     assert exinfo.match("Unreachable outputs")
 
 
@@ -951,54 +951,54 @@ def test_narrow_and_optionality(reverse):
     if reverse:
         ops = list(reversed(ops))
         provides = "'sum2', 'sum1'"
-    netop_str = f"Pipeline('t', needs=['a', 'bb'(?)], provides=[{provides}], x2 ops"
+    pipeline_str = f"Pipeline('t', needs=['a', 'bb'(?)], provides=[{provides}], x2 ops"
 
-    netop = compose("t", *ops)
-    assert repr(netop).startswith(netop_str)
+    pipeline = compose("t", *ops)
+    assert repr(pipeline).startswith(pipeline_str)
 
     ## IO & predicate do not affect network, but solution.
 
     ## Compose with `inputs`
     #
-    netop = compose("t", *ops)
-    assert repr(netop).startswith(netop_str)
-    assert repr(netop.compile("a")).startswith(
+    pipeline = compose("t", *ops)
+    assert repr(pipeline).startswith(pipeline_str)
+    assert repr(pipeline.compile("a")).startswith(
         f"ExecutionPlan(needs=['a'], provides=[{provides}], x2 steps:"
     )
     #
-    netop = compose("t", *ops)
-    assert repr(netop).startswith(netop_str)
-    assert repr(netop.compile(["bb"])).startswith(
+    pipeline = compose("t", *ops)
+    assert repr(pipeline).startswith(pipeline_str)
+    assert repr(pipeline.compile(["bb"])).startswith(
         "ExecutionPlan(needs=['bb'(?)], provides=['sum1'], x1 steps:"
     )
 
     ## Narrow by `provides`
     #
-    netop = compose("t", *ops, outputs="sum1")
-    assert repr(netop).startswith(netop_str)
-    assert repr(netop.compile("bb")).startswith(
+    pipeline = compose("t", *ops, outputs="sum1")
+    assert repr(pipeline).startswith(pipeline_str)
+    assert repr(pipeline.compile("bb")).startswith(
         "ExecutionPlan(needs=['bb'(?)], provides=['sum1'], x3 steps:"
     )
-    assert repr(netop.compile("bb")) == repr(netop.compute({"bb": 1}).plan)
+    assert repr(pipeline.compile("bb")) == repr(pipeline.compute({"bb": 1}).plan)
 
-    netop = compose("t", *ops, outputs=["sum2"])
-    assert repr(netop).startswith(netop_str)
-    assert not netop.compile("bb").steps
-    assert len(netop.compile("a").steps) == 3
-    assert repr(netop.compile("a")).startswith(
+    pipeline = compose("t", *ops, outputs=["sum2"])
+    assert repr(pipeline).startswith(pipeline_str)
+    assert not pipeline.compile("bb").steps
+    assert len(pipeline.compile("a").steps) == 3
+    assert repr(pipeline.compile("a")).startswith(
         "ExecutionPlan(needs=['a'], provides=['sum2'], x3 steps:"
     )
 
     ## Narrow by BOTH
     #
-    netop = compose("t", *ops, outputs=["sum1"])
-    assert repr(netop.compile(inputs="a")).startswith(
+    pipeline = compose("t", *ops, outputs=["sum1"])
+    assert repr(pipeline.compile(inputs="a")).startswith(
         "ExecutionPlan(needs=['a'(?)], provides=['sum1'], x3 steps:"
     )
 
-    netop = compose("t", *ops, outputs=["sum2"])
+    pipeline = compose("t", *ops, outputs=["sum2"])
     with pytest.raises(ValueError, match="Unsolvable graph:"):
-        netop.compute({"bb": 11})
+        pipeline.compute({"bb": 11})
 
 
 # Function without return value.
@@ -1012,7 +1012,7 @@ def _box_increment(box):
 
 
 @pytest.fixture(params=[0, 1])
-def netop_sideffect1(request, exemethod) -> Pipeline:
+def pipeline_sideffect1(request, exemethod) -> Pipeline:
     ops = [
         operation(name="extend", needs=["box", sfx("a")], provides=[sfx("b")])(
             _box_extend
@@ -1029,12 +1029,12 @@ def netop_sideffect1(request, exemethod) -> Pipeline:
     return graph
 
 
-def test_sideffect_no_real_data(netop_sideffect1: Pipeline):
+def test_sideffect_no_real_data(pipeline_sideffect1: Pipeline):
     sidefx_fail = is_marshal_tasks() and not isinstance(
         get_execution_pool(), types.FunctionType  # mp_dummy.Pool
     )
 
-    graph = netop_sideffect1
+    graph = pipeline_sideffect1
     inp = {"box": [0], "a": True}
 
     ## Normal data must not match sideffects.
@@ -1108,20 +1108,20 @@ def test_sideffect_real_input(reverse, exemethod):
     }
 
 
-def test_sideffect_steps(exemethod, netop_sideffect1: Pipeline):
+def test_sideffect_steps(exemethod, pipeline_sideffect1: Pipeline):
     sidefx_fail = is_marshal_tasks() and not isinstance(
         get_execution_pool(), types.FunctionType  # mp_dummy.Pool
     )
 
-    netop = netop_sideffect1.withset(parallel=exemethod)
+    pipeline = pipeline_sideffect1.withset(parallel=exemethod)
     box_orig = [0]
-    sol = netop.compute({"box": [0], sfx("a"): True}, ["box", sfx("c")])
+    sol = pipeline.compute({"box": [0], sfx("a"): True}, ["box", sfx("c")])
     assert sol == {"box": box_orig if sidefx_fail else [1, 2, 3]}
     assert len(sol.plan.steps) == 4
 
     ## Check sideffect links plotted as blue
     #  (assumes color used only for this!).
-    dot = netop.net.plot()
+    dot = pipeline.net.plot()
     assert "blue" in str(dot)
 
 
@@ -1131,28 +1131,28 @@ def test_sideffect_NO_RESULT(caplog, exemethod):
     an_sfx = sfx("b")
     op1 = operation(lambda: NO_RESULT, name="do-SFX", provides=an_sfx)
     op2 = operation(lambda: 1, name="ask-SFX", needs=an_sfx, provides="a")
-    netop = compose("t", op1, op2, parallel=exemethod)
-    sol = netop.compute({}, outputs=an_sfx)
+    pipeline = compose("t", op1, op2, parallel=exemethod)
+    sol = pipeline.compute({}, outputs=an_sfx)
     assert op1 in sol.executed
     assert op2 not in sol.executed
     assert sol == {}
-    sol = netop.compute({})
+    sol = pipeline.compute({})
     assert op1 in sol.executed
     assert op2 in sol.executed
     assert sol == {"a": 1}
-    sol = netop.compute({}, outputs="a")
+    sol = pipeline.compute({}, outputs="a")
     assert op1 in sol.executed
     assert op2 in sol.executed
     assert sol == {"a": 1}
 
     # NO_RESULT cancels sideffects of rescheduled ops.
     #
-    netop = compose("t", op1, op2, rescheduled=True, parallel=exemethod)
-    sol = netop.compute({})
+    pipeline = compose("t", op1, op2, rescheduled=True, parallel=exemethod)
+    sol = pipeline.compute({})
     assert op1 in sol.executed
     assert op2 not in sol.executed
     assert sol == {an_sfx: False}
-    sol = netop.compute({}, outputs="a")
+    sol = pipeline.compute({}, outputs="a")
     assert op2 not in sol.executed
     assert op1 in sol.executed
     assert sol == {}  # an_sfx evicted
@@ -1160,16 +1160,16 @@ def test_sideffect_NO_RESULT(caplog, exemethod):
     # NO_RESULT_BUT_SFX cancels sideffects of rescheduled ops.
     #
     op11 = operation(lambda: NO_RESULT_BUT_SFX, name="do-SFX", provides=an_sfx)
-    netop = compose("t", op11, op2, rescheduled=True, parallel=exemethod)
-    sol = netop.compute({}, outputs=an_sfx)
+    pipeline = compose("t", op11, op2, rescheduled=True, parallel=exemethod)
+    sol = pipeline.compute({}, outputs=an_sfx)
     assert op11 in sol.executed
     assert op2 not in sol.executed
     assert sol == {}
-    sol = netop.compute({})
+    sol = pipeline.compute({})
     assert op11 in sol.executed
     assert op2 in sol.executed
     assert sol == {"a": 1}
-    sol = netop.compute({}, outputs="a")
+    sol = pipeline.compute({}, outputs="a")
     assert op11 in sol.executed
     assert op2 in sol.executed
     assert sol == {"a": 1}
@@ -1177,17 +1177,17 @@ def test_sideffect_NO_RESULT(caplog, exemethod):
     ## If NO_RESULT were not translated,
     #  a warning of unknown out might have emerged.
     caplog.clear()
-    netop = compose("t", operation(lambda: 1, provides=an_sfx), parallel=exemethod)
-    netop.compute({}, outputs=an_sfx)
+    pipeline = compose("t", operation(lambda: 1, provides=an_sfx), parallel=exemethod)
+    pipeline.compute({}, outputs=an_sfx)
     for record in caplog.records:
         if record.levelname == "WARNING":
             assert "Ignoring result(1) because no `provides`" in record.message
 
     caplog.clear()
-    netop = compose(
+    pipeline = compose(
         "t", operation(lambda: NO_RESULT, provides=an_sfx), parallel=exemethod
     )
-    netop.compute({}, outputs=an_sfx)
+    pipeline.compute({}, outputs=an_sfx)
     for record in caplog.records:
         assert record.levelname != "WARNING"
 
@@ -1202,10 +1202,10 @@ def test_sideffect_cancel_sfx_only_operation(exemethod):
         rescheduled=True,
     )
     op2 = operation(lambda: 1, name="op2", needs=an_sfx, provides="a")
-    netop = compose("t", op1, op2, parallel=exemethod)
-    sol = netop.compute({})
+    pipeline = compose("t", op1, op2, parallel=exemethod)
+    sol = pipeline.compute({})
     assert sol == {an_sfx: False}
-    sol = netop.compute(outputs=an_sfx)
+    sol = pipeline.compute(outputs=an_sfx)
     assert sol == {an_sfx: False}
 
 
@@ -1219,10 +1219,10 @@ def test_sideffect_cancel(exemethod):
         rescheduled=True,
     )
     op2 = operation(lambda: 1, name="op2", needs=an_sfx, provides="b")
-    netop = compose("t", op1, op2, parallel=exemethod)
-    sol = netop.compute()
+    pipeline = compose("t", op1, op2, parallel=exemethod)
+    sol = pipeline.compute()
     assert sol == {"a": 1, an_sfx: False}
-    sol = netop.compute(outputs="a")
+    sol = pipeline.compute(outputs="a")
     assert sol == {"a": 1}  # an_sfx evicted
     ## SFX both pruned & evicted
     #
@@ -1238,10 +1238,10 @@ def test_sideffect_not_canceled_if_not_resched(exemethod):
         lambda: {an_sfx: False}, name="op1", provides=an_sfx, returns_dict=True
     )
     op2 = operation(lambda: 1, name="op2", needs=an_sfx, provides="b")
-    netop = compose("t", op1, op2, parallel=exemethod)
-    # sol = netop.compute()
+    pipeline = compose("t", op1, op2, parallel=exemethod)
+    # sol = pipeline.compute()
     # assert sol == {an_sfx: False, "b": 1}
-    sol = netop.compute(outputs="b")
+    sol = pipeline.compute(outputs="b")
     assert sol == {"b": 1}
 
     # Check also op with some provides
@@ -1254,10 +1254,10 @@ def test_sideffect_not_canceled_if_not_resched(exemethod):
         returns_dict=True,
     )
     op2 = operation(lambda: 1, name="op2", needs=an_sfx, provides="b")
-    netop = compose("t", op1, op2, parallel=exemethod)
-    sol = netop.compute()
+    pipeline = compose("t", op1, op2, parallel=exemethod)
+    sol = pipeline.compute()
     assert sol == {"a": 1, an_sfx: False, "b": 1}
-    sol = netop.compute(outputs="b")
+    sol = pipeline.compute(outputs="b")
     assert sol == {"b": 1}
 
 
@@ -1568,7 +1568,7 @@ def test_execution_endurance(exemethod, endurance, endured):
 def test_rescheduling(exemethod, resched, rescheduled):
     canc = operation(lambda: None, name="canc", needs=["b"], provides="cc")
     op = compose(
-        "netop",
+        "pipeline",
         operation(lambda: [1], name="op1", provides=["a", "b"], rescheduled=1),
         canc,
         operation(
@@ -1609,7 +1609,7 @@ def test_rescheduling(exemethod, resched, rescheduled):
 def test_rescheduling_NO_RESULT(exemethod):
     partial = operation(lambda: NO_RESULT, name="op1", provides=["a"], rescheduled=1)
     canc = operation(lambda: None, name="canc", needs="a", provides="b")
-    op = compose("netop", partial, canc, parallel=exemethod)
+    op = compose("pipeline", partial, canc, parallel=exemethod)
     sol = op()
     assert canc in sol.canceled
     assert partial in sol.executed

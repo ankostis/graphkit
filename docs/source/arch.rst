@@ -212,15 +212,14 @@ Architecture
 
         - retained in the `solution`, internally during `execution`, keyed by
           the respective *provide*, or
-        - returned to user after the outer *netop* has finished `computation`.
+        - returned to user after the outer *pipeline* has finished `computation`.
 
-        When no specific outputs requested from a *netop*, :meth:`.Pipeline.compute()`
+        When no specific outputs requested from a *pipeline*, :meth:`.Pipeline.compute()`
         returns all intermediate `inputs` along with the *outputs*, that is,
         no `evictions` happens.
 
         An *operation* may return `partial outputs`.
 
-    netop
     pipeline
         The :class:`.Pipeline` class holding a `network` of `operation`\s
         and `dependencies <dependency>`.
