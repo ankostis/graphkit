@@ -253,6 +253,9 @@ def test_plotters_hierarchy(pipeline: Pipeline, inputs, outputs):
     assert f"digraph {pipeline.name} {{" in str(base_dot)  # graph-name
     assert f"label=<{pipeline.name}>;" in str(base_dot)  # graph-label
 
+    # Just smoke-test plotting of operations
+    str(pipeline.ops[0].plot())
+
     sol = pipeline.compute(inputs, outputs)
 
     # Plotting of pipeline must remains the same.
