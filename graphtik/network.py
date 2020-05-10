@@ -629,7 +629,7 @@ def build_network(
     }
 
     from boltons.setutils import IndexedSet as iset
-    from .composition import NULL_OP, NetworkOperation
+    from .composition import NULL_OP, Pipeline
 
     def proc_op(op, parent=None):
         """clone FuncOperation with certain props changed"""
@@ -655,7 +655,7 @@ def build_network(
 
     merge_set = iset()  # Preseve given node order.
     for op in operations:
-        if isinstance(op, NetworkOperation):
+        if isinstance(op, Pipeline):
             merge_set.update(proc_op(s, op) for s in op.ops)
         else:
             merge_set.add(proc_op(op))

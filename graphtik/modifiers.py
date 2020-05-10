@@ -262,7 +262,7 @@ def mapped(name: str, fn_kwarg: str = None):
 
         >>> graph = compose('mygraph', myadd)
         >>> graph
-        NetworkOperation('mygraph', needs=['a', 'name-in-inputs'], provides=['sum'], x1 ops: myadd)
+        Pipeline('mygraph', needs=['a', 'name-in-inputs'], provides=['sum'], x1 ops: myadd)
 
         >>> sol = graph.compute({"a": 5, "name-in-inputs": 4})['sum']
         >>> sol
@@ -303,7 +303,7 @@ def optional(name: str, fn_kwarg: str = None):
 
         >>> graph = compose('mygraph', myadd)
         >>> graph
-        NetworkOperation('mygraph',
+        Pipeline('mygraph',
                          needs=['a', 'b'(?)],
                          provides=['sum'],
                          x1 ops: myadd)
@@ -396,7 +396,7 @@ def varargs(name: str):
         ...     provides='sum')(enlist)
         ... )
         >>> graph
-        NetworkOperation('mygraph',
+        Pipeline('mygraph',
                          needs=['a', 'b'(?)],
                          provides=['sum'],
                          x1 ops: enlist)
@@ -488,7 +488,7 @@ def sfx(name, optional: bool = None):
         ...         provides="body")(lambda: "TaDa!")
         ... )
         >>> graph
-        NetworkOperation('strip ease',
+        Pipeline('strip ease',
                          needs=[sfx('lights off')],
                          provides=[sfx('lights off'), 'body'],
                          x2 ops: close_the_lights, undress)

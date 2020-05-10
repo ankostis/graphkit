@@ -556,7 +556,7 @@ v5.0.0 (31 Dec 2019, @ankostis): Method-->Parallel, all configs now per op flags
   of threaded, process-pool & marshalled.
 
 + ENH(netop,net): possible to abort many netops at once, by resetting abort flag
-  on every call of :meth:`.NetworkOperation.compute()`
+  on every call of :meth:`.Pipeline.compute()`
   (instead of on the first stopped `netop`).
 
 + FEAT(SOL): :meth:`.scream_if_incomplete()` will raise the new
@@ -607,7 +607,7 @@ Details
 
 + REFACT(NETOP):
 
-  + feat(netop): new method :meth:`.NetworkOperation.compile()`, delegating to
+  + feat(netop): new method :meth:`.Pipeline.compile()`, delegating to
     same-named method of `network`.
 
   + drop(net): method ``Net.narrowed()``; remember `netop.narrowed(outputs+predicate)`
@@ -759,23 +759,23 @@ v3.1.0 (6 Dec 2019, @ankostis): cooler ``prune()``
 
 v3.0.0 (2 Dec 2019, @ankostis):  UNVARYING NetOperations, narrowed, API refact
 ===============================================================================
-+ NetworkOperations:
++ Pipelines:
 
   + BREAK(NET): RAISE if the graph is UNSOLVABLE for the given `needs` & `provides`!
-    (see "raises" list of :meth:`~.NetworkOperation.compute()`).
+    (see "raises" list of :meth:`~.Pipeline.compute()`).
 
-  + BREAK: :meth:`.NetworkOperation.__call__()` accepts solution as keyword-args,
+  + BREAK: :meth:`.Pipeline.__call__()` accepts solution as keyword-args,
     to mimic API of :meth:`Operation.__call__()`.  ``outputs`` keyword has been dropped.
 
     .. Tip::
-        Use :meth:`.NetworkOperation.compute()` when you ask different `outputs`,
+        Use :meth:`.Pipeline.compute()` when you ask different `outputs`,
         or set the ``recompile`` flag if just different `inputs` are given.
 
         Read the next change-items for the new behavior of the ``compute()`` method.
 
   + UNVARYING NetOperations:
 
-    + BREAK: calling method :meth:`.NetworkOperation.compute()` with a single argument
+    + BREAK: calling method :meth:`.Pipeline.compute()` with a single argument
       is now *UNVARYING*, meaning that all `needs` are demanded, and hence,
       all `provides` are produced, unless the ``recompile`` flag is true or ``outputs`` asked.
 
@@ -783,11 +783,11 @@ v3.0.0 (2 Dec 2019, @ankostis):  UNVARYING NetOperations, narrowed, API refact
       and always produce all their `provides`, or scream if less `inputs` than `needs`
       are given.
 
-    + ENH: a newly created or cloned netop can be :meth:`~.NetworkOperation.narrowed()`
+    + ENH: a newly created or cloned netop can be :meth:`~.Pipeline.narrowed()`
       to specific `needs` & `provides`, so as not needing to pass `outputs` on every call
-      to :meth:`~.NetworkOperation.compute()`.
+      to :meth:`~.Pipeline.compute()`.
 
-    + feat: implemented based on the new "narrowed" :attr:`.NetworkOperation.plan` attribute.
+    + feat: implemented based on the new "narrowed" :attr:`.Pipeline.plan` attribute.
 
   + FIX: netop `needs` are not all *optional* by default; optionality applied
     only if all underlying operations have a certain need as optional.
@@ -800,7 +800,7 @@ v3.0.0 (2 Dec 2019, @ankostis):  UNVARYING NetOperations, narrowed, API refact
     all args and operations are now given in a single ``compose()`` call.
 
   + REFACT(net, netop): make Network IMMUTABLE by appending all operations together,
-    in :class:`NetworkOperation` constructor.
+    in :class:`Pipeline` constructor.
 
   + ENH(net): public-size ``_prune_graph()`` --> :meth:`.Network.prune()``
     which can be used to interrogate `needs` & `provides` for a given graph.
@@ -873,7 +873,7 @@ The first non pre-release for 2.x train.
   to break cycles easier, (``base`` works as supposed to), not to import early  everything,
   but to fail plot early if ``pydot`` dependency missing.
 
-+ REFACT: move PLAN and ``compute()`` up, from ``Network --> NetworkOperation``.
++ REFACT: move PLAN and ``compute()`` up, from ``Network --> Pipeline``.
 
 + ENH(NET): new PLAN BUILDING algorithm produces PERFECT EVICTIONS,
   that is, it gradually eliminates from the solution all non-asked outputs.
@@ -978,7 +978,7 @@ Network:
   <https://travis-ci.org/yahoo/graphkit/builds/594729787>`_, caused by
   unstable dicts, and the use of subgraphs.
 
-+ enh: Mark outputs produced by :class:`.NetworkOperation`'s needs as ``optional``.
++ enh: Mark outputs produced by :class:`.Pipeline`'s needs as ``optional``.
   TODO: subgraph network-operations would not be fully functional until
   *"optional outputs"* are dealt with (see :gh:`22`-2.5).
 

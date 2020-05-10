@@ -110,7 +110,7 @@ def abort_run():
     """
     Sets the :term:`abort run` global flag, to halt all currently or future executing plans.
 
-    This global flag is reset when any :meth:`.NetworkOperation.compute()` is executed,
+    This global flag is reset when any :meth:`.Pipeline.compute()` is executed,
     or manually, by calling :func:`.reset_abort()`.
     """
     _abort.get().value = True

@@ -37,7 +37,7 @@ Architecture
         .. autosummary::
 
             graphtik.composition.FunctionalOperation
-            graphtik.composition.NetworkOperation
+            graphtik.composition.Pipeline
             graphtik.network.Network
             graphtik.execution.ExecutionPlan
             graphtik.execution.Solution
@@ -58,7 +58,7 @@ Architecture
         .. Tip::
             - Use :func:`.operation` factory to construct :class:`.FunctionalOperation`
               instances (a.k.a. operations).
-            - Use :func:`.compose()` factory to build :class:`.NetworkOperation`
+            - Use :func:`.compose()` factory to build :class:`.Pipeline`
               instances (a.k.a. pipelines).
 
     combine pipelines
@@ -123,7 +123,7 @@ Architecture
         across runs with (`inputs`, `outputs`, `predicate`) as key.
 
     solution
-        A :class:`.Solution` instance created internally by :meth:`.NetworkOperation.compute()`
+        A :class:`.Solution` instance created internally by :meth:`.Pipeline.compute()`
         to hold the values both `inputs` & `outputs`, and the status of *executed* operations.
         It is based on a :class:`collections.ChainMap`, to keep one dictionary
         for each `operation` executed +1 for inputs.
@@ -214,16 +214,15 @@ Architecture
           the respective *provide*, or
         - returned to user after the outer *netop* has finished `computation`.
 
-        When no specific outputs requested from a *netop*, :meth:`.NetworkOperation.compute()`
+        When no specific outputs requested from a *netop*, :meth:`.Pipeline.compute()`
         returns all intermediate `inputs` along with the *outputs*, that is,
         no `evictions` happens.
 
         An *operation* may return `partial outputs`.
 
     netop
-    network operation
     pipeline
-        The :class:`.NetworkOperation` class holding a `network` of `operation`\s
+        The :class:`.Pipeline` class holding a `network` of `operation`\s
         and `dependencies <dependency>`.
 
     operation
@@ -414,7 +413,7 @@ Architecture
         A global `configurations` flag that when set with :func:`.abort_run()` function,
         it halts the execution of all currently or future `plan`\s.
 
-        It is reset automatically on every call of :meth:`.NetworkOperation.compute()`
+        It is reset automatically on every call of :meth:`.Pipeline.compute()`
         (after a successful intermediate :term:`compilation`), or manually,
         by calling :func:`.reset_abort()`.
 
@@ -454,7 +453,7 @@ Architecture
 
     plottable
         Objects that can plot their graph network, such as those inheriting :class:`.Plottable`,
-        (:class:`.FunctionalOperation`, :class:`.NetworkOperation`, :class:`.Network`,
+        (:class:`.FunctionalOperation`, :class:`.Pipeline`, :class:`.Network`,
         :class:`.ExecutionPlan`, :class:`.Solution`) or a |pydot.Dot|_ instance
         (the result of the :meth:`.Plottable.plot()` method).
 

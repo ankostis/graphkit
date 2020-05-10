@@ -95,7 +95,7 @@ into a computation :term:`graph`:
    ...    abs_qubed,
    ... )
    >>> graphop
-   NetworkOperation('graphop', needs=['a', 'b', 'ab', 'a_minus_ab'],
+   Pipeline('graphop', needs=['a', 'b', 'ab', 'a_minus_ab'],
                      provides=['ab', 'a_minus_ab', 'abs_a_minus_ab_cubed'],
                      x3 ops: mul, sub, abs qubed)
 

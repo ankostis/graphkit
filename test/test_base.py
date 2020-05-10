@@ -10,7 +10,7 @@ import pytest
 
 from graphtik import base, network, composition, operation
 from graphtik.execution import ExecutionPlan, Solution, _OpTask
-from graphtik.composition import NetworkOperation, Operation
+from graphtik.composition import Pipeline, Operation
 
 
 @pytest.mark.parametrize("locs", [None, (), [], [0], "bad"])
@@ -207,7 +207,7 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
         ),
         (
             lambda: fnt.partial(
-                NetworkOperation([operation(str)], "name").compute,
+                Pipeline([operation(str)], "name").compute,
                 named_inputs=None,
                 outputs="bad",
             ),

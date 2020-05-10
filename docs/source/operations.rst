@@ -68,7 +68,7 @@ instance (and not a decorator).
 
    >>> graphop = compose('powers', pow_op2, pow_op3, pow_op0)
    >>> graphop
-   NetworkOperation('powers', needs=['a'], provides=['^2', '^3', '^0'], x3 ops:
+   Pipeline('powers', needs=['a'], provides=['^2', '^3', '^0'], x3 ops:
       mypow, pow_3, pow_0)
 
 
@@ -199,7 +199,7 @@ in :ref:`quick-start`:
    ...    (partial(abspow, p=3))
    ... )
    >>> graphop
-   NetworkOperation('graphop',
+   Pipeline('graphop',
                     needs=['a', 'b', 'ab', 'a_minus_ab'],
                     provides=['ab', 'a_minus_ab', 'abs_a_minus_ab_cubed'],
                     x3 ops: mul, sub, abspow1)

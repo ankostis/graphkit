@@ -472,9 +472,9 @@ class RenArgs(NamedTuple):
     op: "Operation"
     # the name of the item to be renamed/nested
     name: str
-    #: The parent :class:`.NetworkOperation` of the operation currently being processed,.
+    #: The parent :class:`.Pipeline` of the operation currently being processed,.
     #: Has value only when doing :term:`operation nesting` from :func:`.compose()`.
-    parent: "NetworkOperation" = None
+    parent: "Pipeline" = None
 
 
 class Operation(Plottable, abc.ABC):
@@ -843,7 +843,7 @@ class FunctionalOperation(Operation, Plottable):
         #: but it is easier for that function to simply call :meth:`.set_results_by_name()`.
         self.returns_dict = returns_dict
         #: Added as-is into NetworkX graph, and you may filter operations by
-        #: :meth:`.NetworkOperation.withset()`.
+        #: :meth:`.Pipeline.withset()`.
         #: Also plot-rendering affected if they match `Graphviz` properties,
         #: unless they start with underscore(``_``).
         self.node_props = node_props
@@ -1399,7 +1399,7 @@ def operation(
         (i.e. the returned output-values are not zipped with `provides`)
     :param node_props:
         Added as-is into NetworkX graph, and you may filter operations by
-        :meth:`.NetworkOperation.withset()`.
+        :meth:`.Pipeline.withset()`.
         Also plot-rendering affected if they match `Graphviz` properties.,
         unless they start with underscore(``_``)
 
@@ -1491,7 +1491,7 @@ def _id_tristate_bool(b):
     return 3 if b is None else (hash(bool(b)) + 1)
 
 
-class NetworkOperation(Operation, Plottable):
+class Pipeline(Operation, Plottable):
     """
     An operation that can :term:`compute` a network-graph of operations.
 
@@ -1589,7 +1589,7 @@ class NetworkOperation(Operation, Plottable):
         marshalled=None,
         node_props=None,
         renamer=None,
-    ) -> "NetworkOperation":
+    ) -> "Pipeline":
         """
         Return a copy with a network pruned for the given `needs` & `provides`.
 
@@ -1654,7 +1654,7 @@ class NetworkOperation(Operation, Plottable):
                 name = m.group(1)
             name = f"{name}-{uid}"
 
-        return NetworkOperation(
+        return Pipeline(
             self.ops,
             name,
             outputs=outputs,
@@ -1823,7 +1823,7 @@ def compose(
     marshalled=None,
     nest: Union[Callable[[RenArgs], str], Mapping[str, str], Union[bool, str]] = None,
     node_props=None,
-) -> NetworkOperation:
+) -> Pipeline:
     """
     Merge or :term:`nest <operation nesting>` operations & pipelines into a new pipeline,
 
@@ -1895,7 +1895,7 @@ def compose(
         (usefull when run in `parallel` with a :term:`process pool`).
     :param node_props:
         Added as-is into NetworkX graph, to provide for filtering
-        by :meth:`.NetworkOperation.withset()`.
+        by :meth:`.Pipeline.withset()`.
         Also plot-rendering affected if they match `Graphviz` properties,
         unless they start with underscore(``_``)
 
@@ -1951,7 +1951,7 @@ def compose(
     else:
         renamer = None
 
-    return NetworkOperation(
+    return Pipeline(
         operations,
         name,
         outputs=outputs,

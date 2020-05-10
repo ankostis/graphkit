@@ -594,7 +594,7 @@ def test_pipe_rename():
     got = str(ren)
     assert got == (
         """
-    NetworkOperation('t', needs=[sfx('PP.a')], provides=['PP.a', sfx('PP.b'), 'PP.b'], x2 ops: PP.op1, PP.op2)
+    Pipeline('t', needs=[sfx('PP.a')], provides=['PP.a', sfx('PP.b'), 'PP.b'], x2 ops: PP.op1, PP.op2)
         """.strip()
     )
     got = str(ren.ops)

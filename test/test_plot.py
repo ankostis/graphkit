@@ -15,7 +15,7 @@ from jinja2 import Template
 
 from graphtik import base, compose, network, operation, plot
 from graphtik.modifiers import optional
-from graphtik.composition import NetworkOperation, PlotArgs
+from graphtik.composition import Pipeline, PlotArgs
 from graphtik.plot import (
     Plotter,
     Ref,
@@ -65,7 +65,7 @@ def solution(pipeline, inputs, outputs, request):
 def test_plotting_docstring():
     common_formats = ".png .dot .jpg .jpeg .pdf .svg".split()
     for ext in common_formats:
-        assert ext in NetworkOperation.plot.__doc__
+        assert ext in Pipeline.plot.__doc__
         assert ext in network.Network.plot.__doc__
 
 
@@ -246,7 +246,7 @@ def _check_common_end(s1, s2, clip_index):
 
 
 @active_plotter_plugged(Plotter(include_steps=True))
-def test_plotters_hierarchy(pipeline: NetworkOperation, inputs, outputs):
+def test_plotters_hierarchy(pipeline: Pipeline, inputs, outputs):
     # Plotting original network, no plan.
     base_dot = str(pipeline.plot(inputs=inputs, outputs=outputs))
     assert base_dot

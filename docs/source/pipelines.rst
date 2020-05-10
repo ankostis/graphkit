@@ -279,7 +279,7 @@ of the operation.
 
     >>> netop = compose("covid19", get_out, stay_home, exercise, read_book)
     >>> netop
-    NetworkOperation('covid19',
+    Pipeline('covid19',
                      needs=['space', 'time'],
                      provides=['space', 'time', 'fun'],
                      x4 ops: get_out, stay_home, exercise, read_book)

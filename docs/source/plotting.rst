@@ -33,14 +33,14 @@ solution of the last computation, calling methods with arguments like this::
 The same :meth:`.Plottable.plot()` method applies also for:
 
 - :class:`.FunctionalOperation`
-- :class:`.NetworkOperation`
+- :class:`.Pipeline`
 - :class:`.Network`
 - :class:`.ExecutionPlan`
 - :class:`.Solution`
 
 each one capable to producing diagrams with increasing complexity.
 
-For instance, when a net-operation has just been composed, plotting it will
+For instance, when a pipeline has just been composed, plotting it will
 come out bare bone, with just the 2 types of nodes (data & operations), their
 dependencies, and (optionally, if :term:`plot theme` ``include_steps`` is true)
 the sequence of the execution-steps of the :term:`plan`.
@@ -252,7 +252,7 @@ Directives
       the variable name containing what to render, which it can be:
 
       - an instance of :class:`.Plottable` (such as :class:`.FunctionalOperation`,
-        :class:`.NetworkOperation`, :class:`.Network`, :class:`.ExecutionPlan` or
+        :class:`.Pipeline`, :class:`.Network`, :class:`.ExecutionPlan` or
         :class:`.Solution`);
 
       - an already plotted |pydot.Dot|_ instance, ie, the result of

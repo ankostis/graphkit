@@ -27,7 +27,7 @@ from graphtik.composition import (
     NO_RESULT,
     NO_RESULT_BUT_SFX,
     NULL_OP,
-    NetworkOperation,
+    Pipeline,
     Operation,
     compose,
     operation,
@@ -299,7 +299,7 @@ def test_compose_rename_dict(caplog):
     )
     print(str(pip))
     assert str(pip) == (
-        "NetworkOperation('t', needs=['A'], "
+        "Pipeline('t', needs=['A'], "
         "provides=['A', 'aa', 'bb', sfx('c'), 'B', 'p'], x2 ops: OP1, OP2)"
     )
     print(str(pip.ops))
@@ -317,10 +317,10 @@ def test_compose_rename_dict(caplog):
 
 def test_compose_rename_dict_non_str(caplog):
     pip = compose("t", operation(str, "op1"), operation(str, "op2"), nest={"op1": 1},)
-    exp = "NetworkOperation('t', x2 ops: op1, op2)"
+    exp = "Pipeline('t', x2 ops: op1, op2)"
     print(pip)
     assert str(pip) == exp
-    exp = "NetworkOperation('t', x2 ops: t.op1, op2)"
+    exp = "Pipeline('t', x2 ops: t.op1, op2)"
     pip = compose("t", pip, nest={"op1": 1, "op2": 0})
     assert str(pip) == exp
     pip = compose("t", pip, nest={"op1": 1, "op2": ""})
@@ -352,7 +352,7 @@ def test_compose_rename_preserve_ops(caplog):
         operation(str, "op2"),
         nest=lambda na: f"aa.{na.name}",
     )
-    assert str(pip) == "NetworkOperation('t', x2 ops: aa.op1, aa.op2)"
+    assert str(pip) == "Pipeline('t', x2 ops: aa.op1, aa.op2)"
 
 
 def test_compose_merge_ops():
@@ -392,7 +392,7 @@ def test_compose_merge_ops():
     assert sol == exp
 
     assert repr(net3).startswith(
-        "NetworkOperation('merged', needs=['a', 'b', 'sum1', 'c', 'd', 'e', 'f'], "
+        "Pipeline('merged', needs=['a', 'b', 'sum1', 'c', 'd', 'e', 'f'], "
         "provides=['sum1', 'sum2', 'sum3', 'a', 'b'], x5 ops"
     )
 
@@ -409,7 +409,7 @@ def test_network_combine():
     exp = {"a": 1, "b": 2, "c": 4, "sum1": 3, "sum2": 3, "sum3": 7}
     assert net1(a=1, b=2, c=4) == exp
     assert repr(net1).startswith(
-        "NetworkOperation('my network 1', needs=['a'(?), 'b', 'sum1', 'c'], "
+        "Pipeline('my network 1', needs=['a'(?), 'b', 'sum1', 'c'], "
         "provides=['sum1', 'sum2', 'sum3'], x3 ops"
     )
 
@@ -421,7 +421,7 @@ def test_network_combine():
     exp = {"a": 1, "b": 2, "sum1": 3, "sum2": 5}
     assert net2(**{"a": 1, "b": 2}) == exp
     assert repr(net2).startswith(
-        "NetworkOperation('my network 2', needs=['a'(?), 'b', 'sum1'], provides=['sum1', 'sum2'], x2 ops"
+        "Pipeline('my network 2', needs=['a'(?), 'b', 'sum1'], provides=['sum1', 'sum2'], x2 ops"
     )
 
     net3 = compose("merged", net1, net2)
@@ -429,7 +429,7 @@ def test_network_combine():
     assert net3(a=1, b=2, c=4) == exp
 
     assert repr(net3).startswith(
-        "NetworkOperation('merged', needs=['a'(?), 'b', 'sum1', 'c'], provides=['sum1', 'sum2', 'sum3'], x4 ops"
+        "Pipeline('merged', needs=['a'(?), 'b', 'sum1', 'c'], provides=['sum1', 'sum2', 'sum3'], x4 ops"
     )
 
     ## Reverse ops, change results and `needs` optionality.
@@ -439,7 +439,7 @@ def test_network_combine():
     assert net3(**{"a": 1, "b": 2, "c": 4}) == exp
 
     assert repr(net3).startswith(
-        "NetworkOperation('merged', needs=['a'(?), 'b', 'sum1', 'c'], provides=['sum1', 'sum2', 'sum3'], x4 ops"
+        "Pipeline('merged', needs=['a'(?), 'b', 'sum1', 'c'], provides=['sum1', 'sum2', 'sum3'], x4 ops"
     )
 
 
@@ -951,9 +951,7 @@ def test_narrow_and_optionality(reverse):
     if reverse:
         ops = list(reversed(ops))
         provides = "'sum2', 'sum1'"
-    netop_str = (
-        f"NetworkOperation('t', needs=['a', 'bb'(?)], provides=[{provides}], x2 ops"
-    )
+    netop_str = f"Pipeline('t', needs=['a', 'bb'(?)], provides=[{provides}], x2 ops"
 
     netop = compose("t", *ops)
     assert repr(netop).startswith(netop_str)
@@ -1014,7 +1012,7 @@ def _box_increment(box):
 
 
 @pytest.fixture(params=[0, 1])
-def netop_sideffect1(request, exemethod) -> NetworkOperation:
+def netop_sideffect1(request, exemethod) -> Pipeline:
     ops = [
         operation(name="extend", needs=["box", sfx("a")], provides=[sfx("b")])(
             _box_extend
@@ -1031,7 +1029,7 @@ def netop_sideffect1(request, exemethod) -> NetworkOperation:
     return graph
 
 
-def test_sideffect_no_real_data(netop_sideffect1: NetworkOperation):
+def test_sideffect_no_real_data(netop_sideffect1: Pipeline):
     sidefx_fail = is_marshal_tasks() and not isinstance(
         get_execution_pool(), types.FunctionType  # mp_dummy.Pool
     )
@@ -1110,7 +1108,7 @@ def test_sideffect_real_input(reverse, exemethod):
     }
 
 
-def test_sideffect_steps(exemethod, netop_sideffect1: NetworkOperation):
+def test_sideffect_steps(exemethod, netop_sideffect1: Pipeline):
     sidefx_fail = is_marshal_tasks() and not isinstance(
         get_execution_pool(), types.FunctionType  # mp_dummy.Pool
     )
