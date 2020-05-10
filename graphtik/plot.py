@@ -41,7 +41,7 @@ import pydot
 from boltons.iterutils import default_enter, default_exit, get_path, remap
 
 from . import __version__
-from .base import first_solid, func_name, func_source
+from .base import Operation, PlotArgs
 from .config import (
     is_debug,
     is_endure_operations,
@@ -50,7 +50,7 @@ from .config import (
     is_reschedule_operations,
 )
 from .modifiers import is_sfx, is_sfxed
-from .op import Operation, PlotArgs
+from .util import first_solid, func_name, func_source
 
 log = logging.getLogger(__name__)
 

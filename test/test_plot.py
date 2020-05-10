@@ -14,8 +14,8 @@ import pytest
 from jinja2 import Template
 
 from graphtik import base, compose, network, operation, plot
+from graphtik.base import PlotArgs
 from graphtik.modifiers import optional
-from graphtik.op import PlotArgs
 from graphtik.pipeline import Pipeline
 from graphtik.plot import (
     Plotter,

@@ -12,16 +12,7 @@ from typing import Any, Collection, List, Mapping, Optional, Tuple, Union
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
 
-from .base import (
-    UNSET,
-    AbortedException,
-    IncompleteExecutionError,
-    Items,
-    aslist,
-    astuple,
-    first_solid,
-    jetsam,
-)
+from .base import AbortedException, IncompleteExecutionError, UNSET, Items
 from .config import (
     get_execution_pool,
     is_abort,
@@ -39,7 +30,7 @@ from .network import (
     yield_node_names,
     yield_ops,
 )
-from .op import Operation, PlotArgs, Plottable
+from .base import Operation, PlotArgs, Plottable
 
 #: If this logger is *eventually* DEBUG-enabled,
 #: the string-representation of network-objects (network, plan, solution)
@@ -158,6 +149,7 @@ class Solution(ChainMap, Plottable):
             which may be a subset of its `provides`.  Sideffects are not considered.
 
         """
+        from .util import first_solid
 
         def collect_canceled_sideffects(dep, val) -> Collection:
             """yield any sfx `dep` with falsy value, singularizing sideffected."""
@@ -370,6 +362,8 @@ class ExecutionPlan(
         otherwise, *evictions* (along with prefect-evictions check) are skipped.
     """
 
+    from .util import aslist
+
     def prepare_plot_args(self, plot_args: PlotArgs) -> PlotArgs:
         plot_args = plot_args.clone_or_merge_graph(self.net.graph)
         graph = plot_args.graph
@@ -390,6 +384,8 @@ class ExecutionPlan(
         return plot_args
 
     def __repr__(self):
+        from .util import aslist
+
         needs = aslist(self.needs, "needs")
         provides = aslist(self.provides, "provides")
         steps = (
@@ -417,6 +413,8 @@ class ExecutionPlan(
                 *Unreachable outputs...*
 
         """
+        from .util import astuple
+
         if not self.dag:
             raise ValueError(f"Unsolvable graph:\n  {self}")
 
@@ -452,6 +450,8 @@ class ExecutionPlan(
 
          based on global/pre-op configs.
         """
+        from .util import jetsam
+
         ## Selectively DILL the *simpler* _OpTask & `sol` dict
         #  so as to pass through pool-processes,
         #  (s)ee https://stackoverflow.com/a/24673524/548792)
@@ -460,6 +460,8 @@ class ExecutionPlan(
         input_values = dict(solution)
 
         def prep_task(op):
+            from .util import first_solid
+
             try:
                 # Mark start time here, to include also marshalling overhead.
                 solution.elapsed_ms[op] = time.time()
@@ -489,6 +491,7 @@ class ExecutionPlan(
 
     def _handle_task(self, future, op, solution) -> None:
         """Un-dill parallel task results (if marshalled), and update solution / handle failure."""
+        from .util import first_solid, jetsam
 
         def elapsed_ms(op):
             t0 = solution.elapsed_ms[op]
@@ -685,6 +688,8 @@ class ExecutionPlan(
 
                 *Unreachable outputs...*
         """
+        from .util import jetsam
+
         try:
             self.validate(named_inputs, outputs)
 

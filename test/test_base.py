@@ -8,10 +8,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from graphtik import base, network, operation, pipeline
+from graphtik import base, network, operation, pipeline, util
 from graphtik.execution import ExecutionPlan, Solution, _OpTask
-from graphtik.op import Operation
+from graphtik.base import Operation
 from graphtik.pipeline import Pipeline
+from graphtik.util import func_name, func_source, func_sourcelines, jetsam
 
 
 @pytest.mark.parametrize("locs", [None, (), [], [0], "bad"])
@@ -21,7 +22,7 @@ def test_jetsam_bad_locals(locs, caplog):
         try:
             raise Exception()
         except Exception as ex:
-            base.jetsam(ex, locs, a="a")
+            jetsam(ex, locs, a="a")
             raise
 
     assert not hasattr(excinfo.value, "jetsam")
@@ -35,7 +36,7 @@ def test_jetsam_bad_keys(keys, caplog):
         try:
             raise Exception("ABC")
         except Exception as ex:
-            base.jetsam(ex, {}, **keys)
+            jetsam(ex, {}, **keys)
 
     assert not hasattr(excinfo.value, "jetsam")
     assert "Suppressed error while annotating exception" not in caplog.text
@@ -48,7 +49,7 @@ def test_jetsam_bad_locals_given(locs, caplog):
         try:
             raise Exception("ABC")
         except Exception as ex:
-            base.jetsam(ex, locs, a="a")
+            jetsam(ex, locs, a="a")
             raise
 
     assert not hasattr(excinfo.value, "jetsam")
@@ -64,7 +65,7 @@ def test_jetsam_bad_existing_annotation(annotation, caplog):
             ex.jetsam = annotation
             raise ex
         except Exception as ex:
-            base.jetsam(ex, {}, a="a")
+            jetsam(ex, {}, a="a")
             raise
 
     assert excinfo.value.jetsam == {"a": None}
@@ -76,7 +77,7 @@ def test_jetsam_dummy_locals(caplog):
         try:
             raise Exception("ABC")
         except Exception as ex:
-            base.jetsam(ex, {"a": 1}, a="a", bad="bad")
+            jetsam(ex, {"a": 1}, a="a", bad="bad")
             raise
 
     assert isinstance(excinfo.value.jetsam, dict)
@@ -95,7 +96,7 @@ def _jetsamed_fn(*args, **kwargs):
         b = 2
         _scream()
     except Exception as ex:
-        base.jetsam(ex, locals(), a="a", b="b")
+        jetsam(ex, locals(), a="a", b="b")
         raise
 
 
@@ -113,7 +114,7 @@ def test_jetsam_nested():
             fn = "inner"
             _jetsamed_fn()
         except Exception as ex:
-            base.jetsam(ex, locals(), fn="fn")
+            jetsam(ex, locals(), fn="fn")
             raise
 
     def outer():
@@ -123,7 +124,7 @@ def test_jetsam_nested():
             b = 0
             inner()
         except Exception as ex:
-            base.jetsam(ex, locals(), fn="fn")
+            jetsam(ex, locals(), fn="fn")
             raise
 
     with pytest.raises(Exception, match="ABC") as excinfo:
@@ -257,7 +258,7 @@ class _Foo:
     ],
 )
 def test_func_name_builtin(kw, exp):
-    assert base.func_name(eval, **kw) == exp
+    assert func_name(eval, **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -278,7 +279,7 @@ def test_func_name_builtin(kw, exp):
     ],
 )
 def test_func_name_non_partial(kw, exp):
-    assert base.func_name(_foo, **kw) == exp
+    assert func_name(_foo, **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -299,7 +300,7 @@ def test_func_name_non_partial(kw, exp):
     ],
 )
 def test_func_name_partial_empty(kw, exp):
-    assert base.func_name(fnt.partial(_foo), **kw) == exp
+    assert func_name(fnt.partial(_foo), **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -320,7 +321,7 @@ def test_func_name_partial_empty(kw, exp):
     ],
 )
 def test_func_name_partial_args(kw, exp):
-    assert base.func_name(fnt.partial(_foo, 1, a=2), **kw) == exp
+    assert func_name(fnt.partial(_foo, 1, a=2), **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -341,7 +342,7 @@ def test_func_name_partial_args(kw, exp):
     ],
 )
 def test_func_name_partial_x2(kw, exp):
-    assert base.func_name(fnt.partial(fnt.partial(_foo, 1, a=2), b=3), **kw) == exp
+    assert func_name(fnt.partial(fnt.partial(_foo, 1, a=2), b=3), **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -362,7 +363,7 @@ def test_func_name_partial_x2(kw, exp):
     ],
 )
 def test_func_name_class_method(kw, exp):
-    assert base.func_name(_Foo.foo, **kw) == exp
+    assert func_name(_Foo.foo, **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -383,7 +384,7 @@ def test_func_name_class_method(kw, exp):
     ],
 )
 def test_func_name_object_method(kw, exp):
-    assert base.func_name(_Foo().foo, **kw) == exp
+    assert func_name(_Foo().foo, **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -404,7 +405,7 @@ def test_func_name_object_method(kw, exp):
     ],
 )
 def test_func_name_partial_method(kw, exp):
-    assert base.func_name(fnt.partialmethod(_Foo.foo), **kw) == exp
+    assert func_name(fnt.partialmethod(_Foo.foo), **kw) == exp
 
 
 @pytest.mark.parametrize(
@@ -437,23 +438,15 @@ def test_func_name_partial_method(kw, exp):
     ],
 )
 def test_func_name_lambda_local(kw, exp):
-    assert base.func_name(lambda: None, **kw) == exp
+    assert func_name(lambda: None, **kw) == exp
 
 
 def test_func_name_partials_vs_human():
-    assert base.func_name(fnt.partialmethod(_Foo.foo), human=1, partials=0) == "foo"
-    assert base.func_name(fnt.partialmethod(_Foo.foo), human=None, partials=0) == "foo"
-    assert (
-        base.func_name(fnt.partialmethod(_Foo.foo), human=1, partials=1) == "foo(...)"
-    )
-    assert (
-        base.func_name(fnt.partialmethod(_Foo.foo), human=None, partials=1)
-        == "foo(...)"
-    )
-    assert (
-        base.func_name(fnt.partialmethod(_Foo.foo), human=1, partials=None)
-        == "foo(...)"
-    )
+    assert func_name(fnt.partialmethod(_Foo.foo), human=1, partials=0) == "foo"
+    assert func_name(fnt.partialmethod(_Foo.foo), human=None, partials=0) == "foo"
+    assert func_name(fnt.partialmethod(_Foo.foo), human=1, partials=1) == "foo(...)"
+    assert func_name(fnt.partialmethod(_Foo.foo), human=None, partials=1) == "foo(...)"
+    assert func_name(fnt.partialmethod(_Foo.foo), human=1, partials=None) == "foo(...)"
 
 
 ###############
@@ -464,7 +457,7 @@ def test_func_name_partials_vs_human():
 )
 def test_func_source_func(fn):
     exp = "def _foo():\n    pass"
-    assert base.func_source(fn, human=1).strip() == exp
+    assert func_source(fn, human=1).strip() == exp
 
 
 @pytest.mark.parametrize(
@@ -479,20 +472,20 @@ def test_func_source_func(fn):
 )
 def test_func_source_method(fn):
     exp = "def foo(self):\n        pass"
-    assert base.func_source(fn, human=1).strip() == exp
+    assert func_source(fn, human=1).strip() == exp
 
 
 @pytest.mark.parametrize("fn", [eval, fnt.partial(eval)])
 def test_func_source_builtin_id(fn):
     exp = str(eval)
-    got = base.func_source(fn, human=0)
+    got = func_source(fn, human=0)
     assert got == exp
 
 
 @pytest.mark.parametrize("fn", [eval, fnt.partial(eval)])
 def test_func_source_builtin_human(fn):
     exp = "Evaluate the given source in the context of globals and locals."
-    got = base.func_source(fn, human=1)
+    got = func_source(fn, human=1)
     assert got == exp
 
 
@@ -504,7 +497,7 @@ def test_func_source_builtin_human(fn):
 )
 def test_func_sourcelines_func(fn):
     exp = "def _foo():\n    pass"
-    got = base.func_sourcelines(fn, human=1)
+    got = func_sourcelines(fn, human=1)
     assert "".join(got[0]).strip() == exp
     assert got[1] > 200
 
@@ -521,7 +514,7 @@ def test_func_sourcelines_func(fn):
 )
 def test_func_sourcelines_method(fn):
     exp = "def foo(self):\n        pass"
-    got = base.func_sourcelines(fn, human=1)
+    got = func_sourcelines(fn, human=1)
     assert "".join(got[0]).strip() == exp
     assert got[1] > 200
 
@@ -529,5 +522,5 @@ def test_func_sourcelines_method(fn):
 @pytest.mark.parametrize("fn", [eval, fnt.partial(eval)])
 def test_func_sourcelines_builtin(fn):
     exp = ["<built-in function eval>"]
-    got = base.func_sourcelines(fn, human=1)
+    got = func_sourcelines(fn, human=1)
     assert got == (exp, -1)

@@ -12,28 +12,11 @@
 import logging
 import re
 from collections import abc as cabc
-from typing import (
-    Callable,
-    List,
-    Mapping,
-    Union,
-)
+from typing import Callable, List, Mapping, Union
 
-from .base import (
-    UNSET,
-    Items,
-    aslist,
-    jetsam,
-)
+from .base import UNSET, Items, Operation, PlotArgs, Plottable, RenArgs
 from .modifiers import dep_renamed
-from .op import (
-    FunctionalOperation,
-    Operation,
-    Plottable,
-    PlotArgs,
-    RenArgs,
-    reparse_operation_data,
-)
+from .op import FunctionalOperation, reparse_operation_data
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +105,7 @@ class Pipeline(Operation, Plottable):
         Display more informative names for the Operation class
         """
         from .config import is_debug
+        from .util import aslist, astuple
 
         clsname = type(self).__name__
         items = [repr(self.name)]
@@ -337,6 +321,7 @@ class Pipeline(Operation, Plottable):
         See also :meth:`.Operation.compute()`.
         """
         from .config import reset_abort
+        from .util import jetsam
 
         try:
             if named_inputs is UNSET:

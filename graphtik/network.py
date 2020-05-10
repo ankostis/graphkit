@@ -21,10 +21,11 @@ from typing import (
 import networkx as nx
 from boltons.setutils import IndexedSet as iset
 
-from .base import Items, astuple, jetsam
+from .base import Items, PlotArgs, Plottable
 from .config import is_debug, is_skip_evictions
 from .modifiers import dep_renamed, is_mapped, is_optional, is_sfx, optional
-from .op import FunctionalOperation, Operation, PlotArgs, Plottable, RenArgs
+from .base import Operation, RenArgs
+from .util import astuple, jetsam
 
 NodePredicate = Callable[[Any, Mapping], bool]
 
@@ -628,6 +629,7 @@ def build_network(
         k: v for k, v in locals().items() if v is not None and k not in ("operations")
     }
 
+    from .op import FunctionalOperation
     from .pipeline import NULL_OP, Pipeline
 
     def proc_op(op, parent=None):

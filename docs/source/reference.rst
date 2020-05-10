@@ -5,6 +5,7 @@ API Reference
 .. autosummary::
 
      graphtik
+     graphtik.base
      graphtik.op
      graphtik.pipeline
      graphtik.modifiers
@@ -12,11 +13,18 @@ API Reference
      graphtik.execution
      graphtik.plot
      graphtik.config
-     graphtik.base
+     graphtik.util
      graphtik.sphinxext
 
 .. raw:: html
      :file: images/GraphtikModuleDependencies.svg
+
+Module: `base`
+==============
+
+.. automodule:: graphtik.base
+     :members:
+     :undoc-members:
 
 Module: `op`
 =====================
@@ -74,10 +82,10 @@ Module: `config`
 .. automodule:: graphtik.config
      :members:
 
-Module: `base`
+Module: `util`
 ==============
 
-.. automodule:: graphtik.base
+.. automodule:: graphtik.util
      :members:
      :undoc-members:
 
