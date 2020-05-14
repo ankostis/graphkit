@@ -90,11 +90,24 @@ Changelog
 %%%%%%%%%
 
 
+v8.4.0 (14 May 2020, @ankostis): plot edges from south-->north of nodes
+=======================================================================
++ ENH(pipe): nest all Ops (not just FnOps), dropping ``FunctionalOperation``
+  dependency in network code, to **allow for further sub-classing** :class:`Operation`.
++ FIX(pipeline): due to a side-effect on a ``kw`` dictionary, it was mixing the attributes
+  of earlier operations into later ones while merging them into pipelines.
++ refact(pipe): move `build_net()` --> back to `pipeline` module,
+  dropping further network.py-->pipeline.py mod-dep.
++ enh(plot): StyleStack-ize data-io shape selection into separate theme-able dicts.
++ DOC(exe, plotting): task-context section in Debugger
+
+
 v8.3.1 (14 May 2020, @ankostis): plot edges from south-->north of nodes
 =======================================================================
 + ENH(plot): have all the link-edges between data and operations route out and into
   the same point on the nodes (src: south, dst: north).
   Distinguish needs edges from provides with a "dot".
+
 
 v8.3.0 (12 May 2020, @ankostis): mapped-->keyword, drop sol-finalize
 ====================================================================

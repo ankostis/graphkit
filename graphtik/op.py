@@ -67,103 +67,23 @@ NO_RESULT = Token("NO_RESULT")
 NO_RESULT_BUT_SFX = Token("NO_RESULT_BUT_SFX")
 
 
-def as_renames(i, argname):
-    """
-    Parses a list of (source-->destination) from dict, list-of-2-items, single 2-tuple.
-
-    :return:
-        a (possibly empty)list-of-pairs
-
-    .. Note::
-        The same `source` may be repeatedly renamed to multiple `destinations`.
-    """
-    if not i:
-        return ()
-
-    def is_list_of_2(i):
-        try:
-            return all(len(ii) == 2 for ii in i)
-        except Exception:
-            pass  # Let it be, it may be a dictionary...
-
-    if isinstance(i, tuple) and len(i) == 2:
-        i = [i]
-    elif not isinstance(i, cabc.Collection):
-        raise TypeError(
-            f"Argument {argname} must be a list of 2-element items, was: {i!r}"
-        ) from None
-    elif not is_list_of_2(i):
-        try:
-            i = list(dict(i).items())
-        except Exception as ex:
-            raise ValueError(f"Cannot dict-ize {argname}({i!r}) due to: {ex}") from None
-
-    return i
-
-
-def reparse_operation_data(
-    name, needs, provides, aliases=()
-) -> Tuple[
-    Hashable, Collection[str], Collection[str], Collection[Tuple[str, str]],
-]:
-    """
-    Validate & reparse operation data as lists.
-
-    :return:
-        name, needs, provides, aliases
-
-    As a separate function to be reused by client building operations,
-    to detect errors early.
-    """
-    # if name is not None and not name or not isinstance(name, cabc.Hashable):
-    #     raise TypeError(f"Operation `name` must be a truthy hashable, got: {name}")
-    if not isinstance(name, cabc.Hashable):
-        raise TypeError(f"Operation `name` must be hashable, got: {name}")
-
-    # Allow single string-value for needs parameter
-    needs = astuple(needs, "needs", allowed_types=cabc.Collection)
-    if not all(isinstance(i, str) for i in needs):
-        raise TypeError(f"All `needs` must be str, got: {needs!r}")
-
-    # Allow single value for provides parameter
-    provides = astuple(provides, "provides", allowed_types=cabc.Collection)
-    if not all(isinstance(i, str) for i in provides):
-        raise TypeError(f"All `provides` must be str, got: {provides!r}")
-
-    aliases = as_renames(aliases, "aliases")
-    if aliases:
-        if not all(
-            src and isinstance(src, str) and dst and isinstance(dst, str)
-            for src, dst in aliases
-        ):
-            raise TypeError(f"All `aliases` must be non-empty str, got: {aliases!r}")
-        if any(1 for src, dst in aliases if dst in provides):
-            bad = ", ".join(
-                f"{src} -> {dst}" for src, dst in aliases if dst in provides
-            )
-            raise ValueError(
-                f"The `aliases` [{bad}] clash with existing provides in {list(provides)}!"
-            )
-
-        alias_src = iset(src for src, _dst in aliases)
-        if not alias_src <= set(provides):
-            bad_alias_sources = alias_src - provides
-            bad_aliases = ", ".join(
-                f"{src!r}-->{dst!r}" for src, dst in aliases if src in bad_alias_sources
-            )
-            raise ValueError(
-                f"The `aliases` [{bad_aliases}] rename non-existent provides in {list(provides)}!"
-            )
-        sfx_aliases = [
-            f"{src} -> {dst}" for src, dst in aliases if is_sfx(src) or is_sfx(dst)
-        ]
-        if sfx_aliases:
-            raise ValueError(
-                f"The `aliases` must not contain `sideffects` {sfx_aliases}"
-                "\n  Simply add any extra `sideffects` in the `provides`."
-            )
-
-    return name, needs, provides, aliases
+class DictOperation:
+    def __init__(
+        self,
+        fn: Callable = None,
+        name=None,
+        needs: Items = None,
+        provides: Items = None,
+        aliases: Mapping = None,
+        *,
+        rescheduled=None,
+        endured=None,
+        parallel=None,
+        marshalled=None,
+        returns_dict=None,
+        node_props: Mapping = None,
+    ):
+        pass
 
 
 def _spread_sideffects(
@@ -257,23 +177,26 @@ class FunctionalOperation(Operation):
 
         if name is None and fn:
             name = func_name(fn, None, mod=0, fqdn=0, human=0, partials=1)
-        ## Overwrite reparsed op-data.
-        name, needs, provides, aliases = reparse_operation_data(
-            name, needs, provides, aliases
-        )
 
-        needs, _fn_needs = _spread_sideffects(needs)
-        provides, _fn_provides = _spread_sideffects(provides)
-        op_needs = iset(needs)
-        alias_dst = aliases and tuple(dst for _src, dst in aliases)
-        op_provides = iset(itt.chain(provides, alias_dst))
+        super().__init__(
+            name,
+            needs,
+            provides,
+            aliases,
+            rescheduled,
+            endured,
+            parallel,
+            marshalled,
+            node_props,
+        )
+        needs, _fn_needs = _spread_sideffects(self.needs)
+        provides, _fn_provides = _spread_sideffects(self.provides)
+        op_needs = iset(self.needs)
+        alias_dst = aliases and tuple(dst for _src, dst in self.aliases)
+        op_provides = iset(itt.chain(self.provides, alias_dst))
 
         #: The :term:`operation`'s underlying function.
         self.fn = fn
-        #: a name for the operation (e.g. `'conv1'`, `'sum'`, etc..);
-        #: any "parents split by dots(``.``)".
-        #: :seealso: :ref:`operation-nesting`
-        self.name = name
 
         #: The :term:`needs` almost as given by the user
         #: (which may contain MULTI-sideffecteds and dupes),
@@ -300,25 +223,7 @@ class FunctionalOperation(Operation):
         #: Value names the underlying function produces
         #: (dupes preserved, without aliases & sideffects, with stripped :term:`sideffected` dependencies).
         self._fn_provides = _fn_provides
-        #: an optional mapping of `fn_provides` to additional ones, together
-        #: comprising this operations :term:`op_provides`.
-        #:
-        #: You cannot alias an :term:`alias`.
-        self.aliases = aliases
-        #: If true, underlying *callable* may produce a subset of `provides`,
-        #: and the :term:`plan` must then :term:`reschedule` after the operation
-        #: has executed.  In that case, it makes more sense for the *callable*
-        #: to `returns_dict`.
-        self.rescheduled = rescheduled
-        #: If true, even if *callable* fails, solution will :term:`reschedule`;
-        #: ignored if :term:`endurance` enabled globally.
-        self.endured = endured
-        #: execute in :term:`parallel`
-        self.parallel = parallel
-        #: If true, operation will be :term:`marshalled <marshalling>` while computed,
-        #: along with its `inputs` & `outputs`.
-        #: (usefull when run in `parallel` with a :term:`process pool`).
-        self.marshalled = marshalled
+
         #: If true, it means the underlying function :term:`returns dictionary` ,
         #: and no further processing is done on its results,
         #: i.e. the returned output-values are not zipped with `provides`.
@@ -328,11 +233,6 @@ class FunctionalOperation(Operation):
         #: Can be changed amidst execution by the operation's function,
         #: but it is easier for that function to simply call :meth:`.set_results_by_name()`.
         self.returns_dict = returns_dict
-        #: Added as-is into NetworkX graph, and you may filter operations by
-        #: :meth:`.Pipeline.withset()`.
-        #: Also plot-rendering affected if they match `Graphviz` properties,
-        #: unless they start with underscore(``_``).
-        self.node_props = node_props
 
     def __eq__(self, other):
         """Operation identity is based on `name`."""
@@ -776,25 +676,6 @@ class FunctionalOperation(Operation):
     def __call__(self, *args, **kwargs):
         """Like dict args, delegates to :meth:`.compute()`."""
         return self.compute(dict(*args, **kwargs))
-
-    def prepare_plot_args(self, plot_args: PlotArgs) -> PlotArgs:
-        """Delegate to a provisional network with a single op . """
-        from .pipeline import compose
-        from .plot import graphviz_html_string
-
-        is_user_label = bool(plot_args.graph and plot_args.graph.get("graphviz.label"))
-        plottable = compose(self.name, self)
-        plot_args = plot_args.with_defaults(name=self.name)
-        plot_args = plottable.prepare_plot_args(plot_args)
-        assert plot_args.graph, plot_args
-
-        ## Operations don't need another name visible.
-        #
-        if is_user_label:
-            del plot_args.graph.graph["graphviz.label"]
-        plot_args = plot_args._replace(plottable=self)
-
-        return plot_args
 
 
 def operation(

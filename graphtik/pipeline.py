@@ -16,7 +16,17 @@ from typing import Callable, List, Mapping, Union
 
 from boltons.setutils import IndexedSet as iset
 
-from .base import UNSET, Items, Operation, PlotArgs, Plottable, RenArgs, aslist, jetsam
+from .base import (
+    UNSET,
+    Items,
+    Operation,
+    PlotArgs,
+    Plottable,
+    RenArgs,
+    aslist,
+    jetsam,
+    reparse_operation_data,
+)
 from .modifiers import dep_renamed
 
 log = logging.getLogger(__name__)
@@ -30,7 +40,7 @@ class NULL_OP(Operation):
     """
 
     def __init__(self, name):
-        self.name = name
+        super().__init__(name)
 
     def __hash__(self):
         return hash(self.name)
@@ -156,9 +166,7 @@ class Pipeline(Operation):
 
                 *Operations may only be added once, ...*
         """
-        from .op import reparse_operation_data
-
-        ## Set data asap, for debugging, although `net.withset()` will reset them.
+        ## Set data asap, for debugging.
         self.name = name
         # Remember Outputs for future `compute()`?
         self.outputs = outputs
@@ -168,8 +176,8 @@ class Pipeline(Operation):
         self.net = build_network(
             operations, rescheduled, endured, parallel, marshalled, node_props, renamer,
         )
-        self.name, self.needs, self.provides, _aliases = reparse_operation_data(
-            self.name, self.net.needs, self.net.provides
+        super().__init__(
+            name, self.net.needs, self.net.provides,
         )
 
     def __repr__(self):
