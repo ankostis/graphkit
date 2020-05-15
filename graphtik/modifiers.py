@@ -35,27 +35,27 @@ from typing import Any, Callable, Iterable, NamedTuple, Optional, Tuple, Union
 #: Arguments-presence patterns for :class:`_Modifier` constructor.
 #: Combinations missing raise errors.
 _modifier_cstor_matrix = {
-# (7, kw, opt, sfxed, sfx, access): (STR, REPR, FUNC) OR None
+# (7, kw, opt, acs, sfxed, sfx): (STR, REPR, FUNC) OR None
 700000: None,
 710000: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s)",           "keyword"),
 711000: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s)",           "optional"),
 702000: (       "%(dep)s",                  "'%(dep)s'(*)",                 "vararg"),
 703000: (       "%(dep)s",                  "'%(dep)s'(+)",                 "varargs"),
 # Accessor
-700001: (       "%(dep)s",                  "'%(dep)s'($%(acs)s)",          "accessor"),
-710001: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s, $%(acs)s)", "keyword"),
-711001: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s, $%(acs)s)", "optional"),
-702001: (       "%(dep)s",                  "'%(dep)s'(*$%(acs)s)",         "vararg"),
-703001: (       "%(dep)s",                  "'%(dep)s'(+$%(acs)s)",         "varargs"),
+700100: (       "%(dep)s",                  "'%(dep)s'($%(acs)s)",          "accessor"),
+710100: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s, $%(acs)s)", "keyword"),
+711100: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s, $%(acs)s)", "optional"),
+702100: (       "%(dep)s",                  "'%(dep)s'(*$%(acs)s)",         "vararg"),
+703100: (       "%(dep)s",                  "'%(dep)s'(+$%(acs)s)",         "varargs"),
 
-700100: (  "sfx('%(dep)s')",            "sfx('%(dep)s')",                   "sfx"),
-701100: (  "sfx('%(dep)s')",            "sfx('%(dep)s'(?))",                "sfx"),
+700010: (  "sfx('%(dep)s')",            "sfx('%(dep)s')",                   "sfx"),
+701010: (  "sfx('%(dep)s')",            "sfx('%(dep)s'(?))",                "sfx"),
 #SFXED
-700110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s', %(sfx)s)",          "sfxed"),
-710110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s), %(sfx)s)", "sfxed"),
-711110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s), %(sfx)s)", "sfxed"),
-702110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*), %(sfx)s)",       "sfxed_vararg"),
-703110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+), %(sfx)s)",       "sfxed_varargs"),
+700011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s', %(sfx)s)",          "sfxed"),
+710011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s), %(sfx)s)", "sfxed"),
+711011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s), %(sfx)s)", "sfxed"),
+702011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*), %(sfx)s)",       "sfxed_vararg"),
+703011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+), %(sfx)s)",       "sfxed_varargs"),
 # Accessor
 700111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($%(acs)s), %(sfx)s)",          "sfxed"),
 710111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s, $%(acs)s), %(sfx)s)",  "sfxed"),
@@ -126,9 +126,9 @@ class _Modifier(str):
     __slots__ = (
         "keyword",
         "optional",
+        "accessor",
         "sideffected",
         "sfx_list",
-        "accessor",
         "_repr",
         "_func",
     )
@@ -140,6 +140,9 @@ class _Modifier(str):
     #: :func:`is_optional()` returns it.
     #: All regulars are `keyword`.
     optional: _Optionals
+    #: :term:`accessor` get/set functions to get value out of and into solution,
+    #: any sequence of 2-callables will do.
+    accessor: Accessor
     #: Has value only for sideffects: the pure-sideffect string or
     #: the existing :term:`sideffected` dependency.
     sideffected: str
@@ -151,9 +154,6 @@ class _Modifier(str):
     #: - If not empty :func:`is_sfxed()` returns true
     #:   (the :attr:`sideffected`).
     sfx_list: Tuple[Union[str, None]]
-    #: accessor get/set functions to get value out of and into solution,
-    #: any sequence of 2-callables will do.
-    accessor: Accessor
     #: pre-calculated representation
     _repr: str
     #: needed to reconstruct cstor code in :attr:`cmd`
@@ -164,9 +164,9 @@ class _Modifier(str):
         name,
         keyword,
         optional: _Optionals,
+        accessor,
         sideffected,
         sfx_list,
-        accessor,
         _repr,
         _func,
     ) -> "_Modifier":
@@ -203,9 +203,9 @@ class _Modifier(str):
         obj = super().__new__(cls, name)
         obj.keyword = keyword
         obj.optional = optional
+        obj.accessor = accessor
         obj.sideffected = sideffected
         obj.sfx_list = sfx_list
-        obj.accessor = accessor
         obj._repr = _repr
         obj._func = _func
 
@@ -235,9 +235,9 @@ class _Modifier(str):
             str(self),
             self.keyword,
             self.optional,
+            self.accessor,
             self.sideffected,
             self.sfx_list,
-            self.accessor,
             self._repr,
             self._func,
         )
@@ -247,9 +247,9 @@ class _Modifier(str):
         name=...,
         keyword=...,
         optional: _Optionals = ...,
+        accessor=...,
         sideffected=...,
         sfx_list=...,
-        accessor=...,
     ) -> Union["_Modifier", str]:
         """
         Make a new modifier with changes -- handle with care.
@@ -272,9 +272,9 @@ def _modifier(
     name,
     keyword=None,
     optional: _Optionals = None,
+    accessor=None,
     sideffected=None,
     sfx_list=(),
-    accessor=None,
 ) -> Union[str, _Modifier]:
     """
     A :class:`_Modifier` factory that may return a plain str when no other args given.
@@ -282,7 +282,7 @@ def _modifier(
     It decides the final `name` and `_repr` for the new modifier by matching
     the given inputs with the :data:`_modifier_cstor_matrix`.
     """
-    args = (name, keyword, optional, sideffected, sfx_list, accessor)
+    args = (name, keyword, optional, accessor, sideffected, sfx_list)
     formats = _match_modifier_args(*args)
     if not formats:
         # Make a plain string instead.
