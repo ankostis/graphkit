@@ -44,7 +44,7 @@ from .modifiers import (
     dep_renamed,
     dep_singularized,
     dep_stripped,
-    is_mapped,
+    get_keyword,
     is_optional,
     is_pure_sfx,
     is_sfx,
@@ -558,8 +558,8 @@ class FunctionalOperation(Operation):
                 ## TODO: augment modifiers with "retrievers" from `inputs`.
                 inp_value = named_inputs[n]
 
-                if is_mapped(n):
-                    kwargs[n.fn_kwarg] = inp_value
+                if get_keyword(n):
+                    kwargs[n.keyword] = inp_value
 
                 elif is_vararg(n):
                     vararg_vals.append(inp_value)

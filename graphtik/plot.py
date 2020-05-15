@@ -648,11 +648,11 @@ class Theme:
             "<<I>(alias of)</I><BR/>{{ nx_attrs['alias_of'] | eee }}>"
         ),
     }
-    #: Rendered if ``fn_kwarg`` exists in `nx_attrs`.
-    kw_edge_mapping_fn_kwarg = {
+    #: Rendered if ``keyword`` exists in `nx_attrs`.
+    kw_edge_mapping_keyword = {
         "fontsize": 11,  # default: 14
         "fontname": "italic",
-        "label": make_template("<&gt;{{ nx_attrs['fn_kwarg'] | eee }}>"),
+        "label": make_template("<&gt;{{ nx_attrs['keyword'] | eee }}>"),
     }
     kw_edge_pruned = {"color": Ref("pruned_color")}
     kw_edge_rescheduled = {"style": ["dashed"]}
@@ -1306,8 +1306,8 @@ class Plotter:
             styles.add("kw_edge_sideffect")
         if edge_attrs.get("alias_of"):
             styles.add("kw_edge_alias")
-        if edge_attrs.get("fn_kwarg"):
-            styles.add("kw_edge_mapping_fn_kwarg")
+        if edge_attrs.get("keyword"):
+            styles.add("kw_edge_mapping_keyword")
 
         if getattr(src, "rescheduled", None):
             styles.add("kw_edge_rescheduled")

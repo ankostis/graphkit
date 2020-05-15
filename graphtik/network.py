@@ -23,7 +23,7 @@ from boltons.setutils import IndexedSet as iset
 
 from .base import Items, astuple, jetsam
 from .config import is_debug, is_skip_evictions
-from .modifiers import dep_renamed, is_mapped, is_optional, is_sfx, optional
+from .modifiers import dep_renamed, get_keyword, is_optional, is_sfx, optional
 from .base import Operation, PlotArgs, Plottable, RenArgs
 
 NodePredicate = Callable[[Any, Mapping], bool]
@@ -261,8 +261,8 @@ class Network(Plottable):
                 ekw["optional"] = True
             if is_sfx(n):
                 ekw["sideffect"] = nkw["sideffect"] = True
-            if is_mapped(n):
-                ekw["fn_kwarg"] = n.fn_kwarg
+            if get_keyword(n):
+                ekw["keyword"] = n.keyword
             needs.append((n, nkw))
             needs_edges.append((n, operation, ekw))
         graph.add_nodes_from(needs)

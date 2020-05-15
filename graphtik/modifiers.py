@@ -124,7 +124,7 @@ class _Modifier(str):
 
     # avoid __dict__ on instances
     __slots__ = (
-        "fn_kwarg",
+        "keyword",
         "optional",
         "sideffected",
         "sfx_list",
@@ -134,8 +134,8 @@ class _Modifier(str):
     )
 
     #: Map my name in `needs` into this kw-argument of the function.
-    #: :func:`is_mapped()` returns it.
-    fn_kwarg: str
+    #: :func:`get_keyword()` returns it.
+    keyword: str
     #: required is None, regular optional or varargish?
     #: :func:`is_optional()` returns it.
     #: All regulars are `keyword`.
@@ -162,7 +162,7 @@ class _Modifier(str):
     def __new__(
         cls,
         name,
-        fn_kwarg,
+        keyword,
         optional: _Optionals,
         sideffected,
         sfx_list,
@@ -201,7 +201,7 @@ class _Modifier(str):
             )
 
         obj = super().__new__(cls, name)
-        obj.fn_kwarg = fn_kwarg
+        obj.keyword = keyword
         obj.optional = optional
         obj.sideffected = sideffected
         obj.sfx_list = sfx_list
@@ -221,9 +221,9 @@ class _Modifier(str):
         items = [f"'{dep}'"]
         if self.sfx_list:
             items.append(", ".join(f"'{i}'" for i in self.sfx_list))
-        if self.fn_kwarg and self.fn_kwarg != dep:
-            fn_kwarg = f"'{self.fn_kwarg}'"
-            items.append(f"fn_kwarg={fn_kwarg}" if self.sfx_list else fn_kwarg)
+        if self.keyword and self.keyword != dep:
+            keyword = f"'{self.keyword}'"
+            items.append(f"keyword={keyword}" if self.sfx_list else keyword)
         if self.optional == _Optionals.keyword and self._func != "optional":
             items.append("optional=1" if self.sfx_list else "1")
         if self.accessor:
@@ -233,7 +233,7 @@ class _Modifier(str):
     def __getnewargs__(self):
         return (
             str(self),
-            self.fn_kwarg,
+            self.keyword,
             self.optional,
             self.sideffected,
             self.sfx_list,
@@ -245,7 +245,7 @@ class _Modifier(str):
     def _withset(
         self,
         name=...,
-        fn_kwarg=...,
+        keyword=...,
         optional: _Optionals = ...,
         sideffected=...,
         sfx_list=...,
@@ -270,7 +270,7 @@ class _Modifier(str):
 
 def _modifier(
     name,
-    fn_kwarg=None,
+    keyword=None,
     optional: _Optionals = None,
     sideffected=None,
     sfx_list=(),
@@ -282,7 +282,7 @@ def _modifier(
     It decides the final `name` and `_repr` for the new modifier by matching
     the given inputs with the :data:`_modifier_cstor_matrix`.
     """
-    args = (name, fn_kwarg, optional, sideffected, sfx_list, accessor)
+    args = (name, keyword, optional, sideffected, sfx_list, accessor)
     formats = _match_modifier_args(*args)
     if not formats:
         # Make a plain string instead.
@@ -291,7 +291,7 @@ def _modifier(
     str_fmt, repr_fmt, func = formats
     fmt_args = {
         "dep": name,
-        "kw": f"'{fn_kwarg}'" if fn_kwarg != name else "",
+        "kw": f"'{keyword}'" if keyword != name else "",
         "sfx": ", ".join(f"'{i}'" for i in sfx_list),
         "acs": accessor,
     }
@@ -301,14 +301,14 @@ def _modifier(
     return _Modifier(name, *args[1:], _repr, func)
 
 
-def keyword(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Modifier:
+def keyword(name: str, keyword: str = None, accessor: Accessor = None) -> _Modifier:
     """
     Annotate a :term:`needs` that (optionally) maps `inputs` name --> *keyword* argument name.
 
     The value of a *keyword* dependency is passed in as *keyword argument*
     to the underlying function.
 
-    :param fn_kwarg:
+    :param keyword:
         The argument-name corresponding to this named-input.
         If it is None, assumed the same as `name`, so as
         to behave always like kw-type arg, and to preserve its fn-name
@@ -324,7 +324,7 @@ def keyword(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Modi
         (actually a 2-tuple with functions is ok)
 
     :return:
-        a :class:`_Modifier` instance, even if no `fn_kwarg` is given OR
+        a :class:`_Modifier` instance, even if no `keyword` is given OR
         it is the same as `name`.
 
     **Example:**
@@ -354,11 +354,11 @@ def keyword(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Modi
 
         .. graphtik::
     """
-    # Must pass a truthy `fn_kwarg` bc cstor cannot not know its keyword.
-    return _modifier(name, fn_kwarg=fn_kwarg or name, accessor=accessor)
+    # Must pass a truthy `keyword` bc cstor cannot not know its keyword.
+    return _modifier(name, keyword=keyword or name, accessor=accessor)
 
 
-def optional(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Modifier:
+def optional(name: str, keyword: str = None, accessor: Accessor = None) -> _Modifier:
     """
     Annotate :term:`optionals` `needs` corresponding to *defaulted* op-function arguments, ...
 
@@ -367,7 +367,7 @@ def optional(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Mod
     The value of an *optional* dependency is passed in as a *keyword argument*
     to the underlying function.
 
-    :param fn_kwarg:
+    :param keyword:
         the name for the function argument it corresponds;
         if a falsy is given, same as `name` assumed,
         to behave always like kw-type arg and to preserve its fn-name
@@ -415,9 +415,9 @@ def optional(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Mod
                             fn='myadd')
 
     """
-    # Must pass a truthy `fn_kwarg` as cstor-matrix requires.
+    # Must pass a truthy `keyword` as cstor-matrix requires.
     return _modifier(
-        name, fn_kwarg=fn_kwarg or name, optional=_Optionals.keyword, accessor=accessor
+        name, keyword=keyword or name, optional=_Optionals.keyword, accessor=accessor
     )
 
 
@@ -429,7 +429,7 @@ def accessor(name: str, accessor: Accessor = None) -> _Modifier:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
 
-    Use other modifier factories for combinations with `optional`, `fn_kwarg`, etc.
+    Use other modifier factories for combinations with `optional`, `keyword`, etc.
     """
     return _modifier(name, accessor=accessor)
 
@@ -629,14 +629,14 @@ def sfxed(
     dependency: str,
     sfx0: str,
     *sfx_list: str,
-    fn_kwarg: str = None,
+    keyword: str = None,
     optional: bool = None,
     accessor: Accessor = None,
 ) -> _Modifier:
     r"""
     Annotates a :term:`sideffected` dependency in the solution sustaining side-effects.
 
-    :param fn_kwarg:
+    :param keyword:
         the name for the function argument it corresponds.
         When optional, it becomes the same as `name` if falsy, so as
         to behave always like kw-type arg, and to preserve fn-name if ever renamed.
@@ -729,7 +729,7 @@ def sfxed(
     return _modifier(
         dependency,
         optional=_Optionals.keyword if optional else None,
-        fn_kwarg=dependency if optional and not fn_kwarg else fn_kwarg,
+        keyword=dependency if optional and not keyword else keyword,
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
         accessor=accessor,
@@ -762,16 +762,16 @@ def sfxed_varargs(
     )
 
 
-def is_mapped(dep) -> Optional[str]:
+def get_keyword(dep) -> Optional[str]:
     """
     Check if a :term:`dependency` is keyword (and get it).
 
     All non-varargish optionals are "keyword" (including sideffected ones).
 
     :return:
-        the :attr:`.fn_kwarg`
+        the :attr:`.keyword`
     """
-    return getattr(dep, "fn_kwarg", None)
+    return getattr(dep, "keyword", None)
 
 
 def is_optional(dep) -> Optional[_Optionals]:
