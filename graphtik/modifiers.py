@@ -24,29 +24,44 @@ these **diacritics**:
     ?   : :func:`optional` (fn_keyword)
     *   : :func:`vararg`
     +   : :func:`varargs`
+    $   : :term:`accessor`
 
 .. diacritics-end
 """
 import enum
-from typing import Iterable, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, NamedTuple, Optional, Tuple, Union
 
 # fmt: off
 #: Arguments-presence patterns for :class:`_Modifier` constructor.
 #: Combinations missing raise errors.
 _modifier_cstor_matrix = {
-# (7, kw, opt, sfxed, sfx): (STR, REPR, FUNC) OR None
-70000: None,
-71000: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s)"           , "keyword"),
-71100: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s)"          , "optional"),
-70200: (       "%(dep)s",                  "'%(dep)s'(*)"                , "vararg"),
-70300: (       "%(dep)s",                  "'%(dep)s'(+)"                , "varargs"),
-70010: (  "sfx('%(dep)s')",            "sfx('%(dep)s')"                  , "sfx"),
-70110: (  "sfx('%(dep)s')",            "sfx('%(dep)s'(?))"               , "sfx"),
-70011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s', %(sfx)s)"         , "sfxed"),
-71011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s), %(sfx)s)" , "sfxed"),
-71111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s), %(sfx)s)", "sfxed"),
-70211: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*), %(sfx)s)"      , "sfxed_vararg"),
-70311: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+), %(sfx)s)"      , "sfxed_varargs"),
+# (7, kw, opt, sfxed, sfx, access): (STR, REPR, FUNC) OR None
+700000: None,
+710000: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s)",           "keyword"),
+711000: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s)",           "optional"),
+702000: (       "%(dep)s",                  "'%(dep)s'(*)",                 "vararg"),
+703000: (       "%(dep)s",                  "'%(dep)s'(+)",                 "varargs"),
+# Accessor
+700001: (       "%(dep)s",                  "'%(dep)s'($%(acs)s)",          "accessor"),
+710001: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s, $%(acs)s)", "keyword"),
+711001: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s, $%(acs)s)", "optional"),
+702001: (       "%(dep)s",                  "'%(dep)s'(*$%(acs)s)",         "vararg"),
+703001: (       "%(dep)s",                  "'%(dep)s'(+$%(acs)s)",         "varargs"),
+
+700100: (  "sfx('%(dep)s')",            "sfx('%(dep)s')",                   "sfx"),
+701100: (  "sfx('%(dep)s')",            "sfx('%(dep)s'(?))",                "sfx"),
+#SFXED
+700110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s', %(sfx)s)",          "sfxed"),
+710110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s), %(sfx)s)", "sfxed"),
+711110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s), %(sfx)s)", "sfxed"),
+702110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*), %(sfx)s)",       "sfxed_vararg"),
+703110: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+), %(sfx)s)",       "sfxed_varargs"),
+# Accessor
+700111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($%(acs)s), %(sfx)s)",          "sfxed"),
+710111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s, $%(acs)s), %(sfx)s)",  "sfxed"),
+711111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s, $%(acs)s), %(sfx)s)", "sfxed"),
+702111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*$%(acs)s), %(sfx)s)",         "sfxed_vararg"),
+703111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+$%(acs)s), %(sfx)s)",         "sfxed_varargs"),
 }
 # fmt: on
 
@@ -69,6 +84,24 @@ class _Optionals(enum.Enum):
     keyword = 1
     vararg = 2
     varargs = 3
+
+
+class Accessor(NamedTuple):
+    """Getter/setter functions to extract/populate solution values. """
+
+    #: like:: ``get(sol, key) -> value``
+    get: Callable[["Solution", str], Any]
+    #: like: ``set(sol, key, val)``
+    set: Callable[["Solution", str, Any], None]
+
+    def validate(self):
+        """Call me early to fail asap (if it must); returns self instance. """
+
+        if not callable(self.get) or not callable(self.set):
+            raise TypeError(
+                f"`get/set` must be callable, were: {self.get!r}, {self.set!r}"
+            )
+        return self
 
 
 class _Modifier(str):
@@ -95,6 +128,7 @@ class _Modifier(str):
         "optional",
         "sideffected",
         "sfx_list",
+        "accessor",
         "_repr",
         "_func",
     )
@@ -117,13 +151,24 @@ class _Modifier(str):
     #: - If not empty :func:`is_sfxed()` returns true
     #:   (the :attr:`sideffected`).
     sfx_list: Tuple[Union[str, None]]
+    #: accessor get/set functions to get value out of and into solution,
+    #: any sequence of 2-callables will do.
+    accessor: Accessor
     #: pre-calculated representation
     _repr: str
     #: needed to reconstruct cstor code in :attr:`cmd`
     _func: str
 
     def __new__(
-        cls, name, fn_kwarg, optional: _Optionals, sideffected, sfx_list, _repr, _func
+        cls,
+        name,
+        fn_kwarg,
+        optional: _Optionals,
+        sideffected,
+        sfx_list,
+        accessor,
+        _repr,
+        _func,
     ) -> "_Modifier":
         """Warning, returns None! """
         ## sanity checks & preprocessing
@@ -132,6 +177,15 @@ class _Modifier(str):
             raise ValueError(
                 f"Invalid _Optional enum {optional!r}\n  locals={locals()}"
             )
+        if accessor:
+            try:
+                if not isinstance(accessor, Accessor):
+                    accessor = Accessor(*(not isinstance(accessor, str) and accessor))
+                accessor.validate()
+            except Exception as ex:
+                raise ValueError(
+                    f"Invalid Accessor {accessor!r}: {ex}\n  locals={locals()}"
+                ) from ex
         if sideffected and is_sfx(sideffected):
             raise ValueError(
                 f"`sideffected` cannot be sideffect, got {sideffected!r}"
@@ -151,6 +205,7 @@ class _Modifier(str):
         obj.optional = optional
         obj.sideffected = sideffected
         obj.sfx_list = sfx_list
+        obj.accessor = accessor
         obj._repr = _repr
         obj._func = _func
 
@@ -171,6 +226,8 @@ class _Modifier(str):
             items.append(f"fn_kwarg={fn_kwarg}" if self.sfx_list else fn_kwarg)
         if self.optional == _Optionals.keyword and self._func != "optional":
             items.append("optional=1" if self.sfx_list else "1")
+        if self.accessor:
+            items.append(f"accessor={self.accessor!r}")
         return f"{self._func}({', '.join(items)})"
 
     def __getnewargs__(self):
@@ -180,6 +237,7 @@ class _Modifier(str):
             self.optional,
             self.sideffected,
             self.sfx_list,
+            self.accessor,
             self._repr,
             self._func,
         )
@@ -191,6 +249,7 @@ class _Modifier(str):
         optional: _Optionals = ...,
         sideffected=...,
         sfx_list=...,
+        accessor=...,
     ) -> Union["_Modifier", str]:
         """
         Make a new modifier with changes -- handle with care.
@@ -210,7 +269,12 @@ class _Modifier(str):
 
 
 def _modifier(
-    name, fn_kwarg=None, optional: _Optionals = None, sideffected=None, sfx_list=(),
+    name,
+    fn_kwarg=None,
+    optional: _Optionals = None,
+    sideffected=None,
+    sfx_list=(),
+    accessor=None,
 ) -> Union[str, _Modifier]:
     """
     A :class:`_Modifier` factory that may return a plain str when no other args given.
@@ -218,7 +282,7 @@ def _modifier(
     It decides the final `name` and `_repr` for the new modifier by matching
     the given inputs with the :data:`_modifier_cstor_matrix`.
     """
-    args = (name, fn_kwarg, optional, sideffected, sfx_list)
+    args = (name, fn_kwarg, optional, sideffected, sfx_list, accessor)
     formats = _match_modifier_args(*args)
     if not formats:
         # Make a plain string instead.
@@ -229,6 +293,7 @@ def _modifier(
         "dep": name,
         "kw": f"'{fn_kwarg}'" if fn_kwarg != name else "",
         "sfx": ", ".join(f"'{i}'" for i in sfx_list),
+        "acs": accessor,
     }
     name = str_fmt % fmt_args
     _repr = repr_fmt % fmt_args
@@ -236,7 +301,7 @@ def _modifier(
     return _Modifier(name, *args[1:], _repr, func)
 
 
-def keyword(name: str, fn_kwarg: str = None) -> _Modifier:
+def keyword(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Modifier:
     """
     Annotate a :term:`needs` that (optionally) maps `inputs` name --> *keyword* argument name.
 
@@ -254,6 +319,10 @@ def keyword(name: str, fn_kwarg: str = None) -> _Modifier:
             (but not :term:`varargish`), or for functions with keywords-only arguments
             (like ``def func(*, foo, bar): ...``),
             since `inputs` are normally fed into functions by-position, not by-name.
+    :param accessor:
+        the functions to access values to/from solution (see :class:`Accessor`)
+        (actually a 2-tuple with functions is ok)
+
     :return:
         a :class:`_Modifier` instance, even if no `fn_kwarg` is given OR
         it is the same as `name`.
@@ -286,10 +355,10 @@ def keyword(name: str, fn_kwarg: str = None) -> _Modifier:
         .. graphtik::
     """
     # Must pass a truthy `fn_kwarg` bc cstor cannot not know its keyword.
-    return _modifier(name, fn_kwarg=fn_kwarg or name)
+    return _modifier(name, fn_kwarg=fn_kwarg or name, accessor=accessor)
 
 
-def optional(name: str, fn_kwarg: str = None) -> _Modifier:
+def optional(name: str, fn_kwarg: str = None, accessor: Accessor = None) -> _Modifier:
     """
     Annotate :term:`optionals` `needs` corresponding to *defaulted* op-function arguments, ...
 
@@ -303,6 +372,9 @@ def optional(name: str, fn_kwarg: str = None) -> _Modifier:
         if a falsy is given, same as `name` assumed,
         to behave always like kw-type arg and to preserve its fn-name
         if ever renamed.
+    :param accessor:
+        the functions to access values to/from solution (see :class:`Accessor`)
+        (actually a 2-tuple with functions is ok)
 
     **Example:**
 
@@ -344,12 +416,31 @@ def optional(name: str, fn_kwarg: str = None) -> _Modifier:
 
     """
     # Must pass a truthy `fn_kwarg` as cstor-matrix requires.
-    return _modifier(name, fn_kwarg=fn_kwarg or name, optional=_Optionals.keyword)
+    return _modifier(
+        name, fn_kwarg=fn_kwarg or name, optional=_Optionals.keyword, accessor=accessor
+    )
 
 
-def vararg(name: str) -> _Modifier:
+def accessor(name: str, accessor: Accessor = None) -> _Modifier:
+    """
+    Annotate a `dependency` with :term:`accessor` functions to read/write `solution`.
+
+    :param accessor:
+        the functions to access values to/from solution (see :class:`Accessor`)
+        (actually a 2-tuple with functions is ok)
+
+    Use other modifier factories for combinations with `optional`, `fn_kwarg`, etc.
+    """
+    return _modifier(name, accessor=accessor)
+
+
+def vararg(name: str, accessor: Accessor = None) -> _Modifier:
     """
     Annotate a :term:`varargish` `needs` to  be fed as function's ``*args``.
+
+    :param accessor:
+        the functions to access values to/from solution (see :class:`Accessor`)
+        (actually a 2-tuple with functions is ok)
 
     .. seealso::
         Consult also the example test-case in: :file:`test/test_op.py:test_varargs()`,
@@ -388,12 +479,16 @@ def vararg(name: str) -> _Modifier:
         {'a': 5, 'sum': 5}
 
     """
-    return _modifier(name, optional=_Optionals.vararg)
+    return _modifier(name, optional=_Optionals.vararg, accessor=accessor)
 
 
-def varargs(name: str) -> _Modifier:
+def varargs(name: str, accessor: Accessor = None) -> _Modifier:
     """
     An :term:`varargish`  :func:`.vararg`, naming a *iterable* value in the inputs.
+
+    :param accessor:
+        the functions to access values to/from solution (see :class:`Accessor`)
+        (actually a 2-tuple with functions is ok)
 
     .. seealso::
         Consult also the example test-case in: :file:`test/test_op.py:test_varargs()`,
@@ -450,7 +545,7 @@ def varargs(name: str) -> _Modifier:
 
     .. varargs-mistake-end
     """
-    return _modifier(name, optional=_Optionals.varargs)
+    return _modifier(name, optional=_Optionals.varargs, accessor=accessor)
 
 
 def sfx(name, optional: bool = None) -> _Modifier:
@@ -536,6 +631,7 @@ def sfxed(
     *sfx_list: str,
     fn_kwarg: str = None,
     optional: bool = None,
+    accessor: Accessor = None,
 ) -> _Modifier:
     r"""
     Annotates a :term:`sideffected` dependency in the solution sustaining side-effects.
@@ -545,6 +641,9 @@ def sfxed(
         When optional, it becomes the same as `name` if falsy, so as
         to behave always like kw-type arg, and to preserve fn-name if ever renamed.
         When not optional, if not given, it's all fine.
+    :param accessor:
+        the functions to access values to/from solution (see :class:`Accessor`)
+        (actually a 2-tuple with functions is ok)
 
     Like :func:`.sfx` but annotating a *real* :term:`dependency` in the solution,
     allowing that dependency to be present both in :term:`needs` and :term:`provides`
@@ -633,26 +732,33 @@ def sfxed(
         fn_kwarg=dependency if optional and not fn_kwarg else fn_kwarg,
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
+        accessor=accessor,
     )
 
 
-def sfxed_vararg(dependency: str, sfx0: str, *sfx_list: str) -> _Modifier:
+def sfxed_vararg(
+    dependency: str, sfx0: str, *sfx_list: str, accessor: Accessor = None
+) -> _Modifier:
     """Like :func:`sideffected` + :func:`vararg`. """
     return _modifier(
         dependency,
         optional=_Optionals.vararg,
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
+        accessor=accessor,
     )
 
 
-def sfxed_varargs(dependency: str, sfx0: str, *sfx_list: str) -> _Modifier:
+def sfxed_varargs(
+    dependency: str, sfx0: str, *sfx_list: str, accessor: Accessor = None
+) -> _Modifier:
     """Like :func:`sideffected` + :func:`varargs`. """
     return _modifier(
         dependency,
         optional=_Optionals.varargs,
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
+        accessor=accessor,
     )
 
 
@@ -713,6 +819,16 @@ def is_pure_sfx(dep) -> bool:
 def is_sfxed(dep) -> bool:
     """Check if it is :term:`sideffected`."""
     return getattr(dep, "sideffected", None) and getattr(dep, "sfx_list", None)
+
+
+def get_accessor(dep) -> bool:
+    """
+    Check if dependency has an :term:`accessor`.
+
+    :return:
+        the :attr:`accessor`
+    """
+    return getattr(dep, "accessor", None)
 
 
 def dependency(dep) -> str:

@@ -141,6 +141,8 @@ Architecture
         and the base (least precedence) is the user-inputs given when the execution
         started.
 
+        Certain values may be extracted/populated with `accessor`\s.
+
     graph
     network graph
         A graph of `operation`\s linked by their `dependencies <dependency>` forming a `pipeline`.
@@ -313,7 +315,8 @@ Architecture
         A `modifier` change `dependency` behavior during `compilation` or `execution`.
 
         For instance, a `needs` may be annotated as :func:`.keyword` and/or `optionals`
-        function arguments, `provides` and *needs* can be annotated as "ghost" `sideffects`.
+        function arguments, `provides` and *needs* can be annotated as "ghost" `sideffects`
+        or assigned an `accessor`.
 
         .. include:: ../../graphtik/modifiers.py
             :start-after: .. diacritics-start
@@ -387,6 +390,12 @@ Architecture
 
         It is annotated with :func:`.sfxed`;  it may have all `diacritic`\s
         in printouts.
+
+    accessor
+        Getter/setter functions to extract/populate `solution` values given as a `modifier` parameter
+        (not applicable for pure `sideffects`).
+
+        See :class:`.Accessor` defining class and the :func:`.json_pointer` concrete factory.
 
     reschedule
     rescheduling

@@ -451,7 +451,7 @@ class FunctionalOperation(Operation):
 
         **Examples**
 
-            >>> from graphtik import sfx
+            >>> from graphtik import operation, sfx
 
             >>> op = operation(str, "foo", needs="a",
             ...     provides=["b", sfx("c")],
