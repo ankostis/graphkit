@@ -44,6 +44,7 @@ from .modifiers import (
     dep_renamed,
     dep_singularized,
     dep_stripped,
+    get_accessor,
     get_keyword,
     is_optional,
     is_pure_sfx,
@@ -535,6 +536,7 @@ class FunctionalOperation(Operation):
         inputs = dict(named_inputs) if is_debug() else list(named_inputs)
         errors.append(f"+++inputs: {inputs}")
         errors.append(f"+++{self}")
+        errors.append("(tip: enabled debug log for stack traces)")
 
         msg = textwrap.indent("\n".join(errors), " " * 4)
         raise MultiValueError(f"Failed preparing needs: \n{msg}", *exceptions)
@@ -546,7 +548,10 @@ class FunctionalOperation(Operation):
         for n in self._fn_needs:
             assert not is_sfx(n), locals()
             try:
-                if n not in named_inputs:
+                acc = get_accessor(n)
+                if acc:
+                    inp_value = acc.get(named_inputs, n)
+                elif n not in named_inputs:
                     if not is_optional(n) or is_sfx(n):
                         # It means `inputs` < compulsory `needs`.
                         # Compilation should have ensured all compulsories existed,
@@ -554,9 +559,8 @@ class FunctionalOperation(Operation):
                         ##
                         missing.append(n)
                     continue
-
-                ## TODO: augment modifiers with "retrievers" from `inputs`.
-                inp_value = named_inputs[n]
+                else:
+                    inp_value = named_inputs[n]
 
                 if get_keyword(n):
                     kwargs[n.keyword] = inp_value

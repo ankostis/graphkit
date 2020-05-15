@@ -15,6 +15,7 @@ from .base import AbortedException, IncompleteExecutionError, MultiValueError
 from .op import NO_RESULT, NO_RESULT_BUT_SFX, operation
 from .pipeline import NULL_OP, compose
 from .modifiers import (
+    accessor,
     keyword,
     optional,
     sfx,

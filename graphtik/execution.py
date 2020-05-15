@@ -36,7 +36,7 @@ from .config import (
     is_reschedule_operations,
     is_skip_evictions,
 )
-from .modifiers import dep_singularized, dep_stripped, is_sfx
+from .modifiers import dep_singularized, dep_stripped, get_accessor, is_sfx
 from .network import (
     _EvictInstruction,
     unsatisfied_operations,
@@ -147,8 +147,14 @@ class Solution(ChainMap, Plottable):
             )
 
     def _update_op_outs(self, op, outputs):
-        """A separate method to allow subclasses with custom (e.g. nested) logic. """
-        self._layers[op].update(outputs)
+        """A separate method to allow subclasses with custom accessor logic. """
+        op_layer = self._layers[op]
+        if any(1 for o in outputs if get_accessor(o)):
+            for k, val in outputs.items():
+                acc = get_accessor(k)
+                acc.set(self, k, val)
+        else:
+            op_layer.update(outputs)
 
     def operation_executed(self, op, outputs):
         """
