@@ -14,7 +14,7 @@ from itertools import cycle
 from multiprocessing import Pool, cpu_count
 from multiprocessing import dummy as mp_dummy
 from multiprocessing import get_context
-from operator import add, floordiv, mul, sub
+from operator import add, floordiv, mul, sub, getitem, setitem
 from pprint import pprint
 from textwrap import dedent
 from time import sleep
@@ -37,7 +37,7 @@ from graphtik.config import (
     tasks_marshalled,
 )
 from graphtik.execution import Solution, _OpTask, task_context
-from graphtik.modifiers import dep_renamed, optional, sfx, sfxed, vararg
+from graphtik.modifiers import accessor, dep_renamed, optional, sfx, sfxed, vararg
 from graphtik.op import NO_RESULT, NO_RESULT_BUT_SFX, operation
 from graphtik.pipeline import NULL_OP, Pipeline, compose
 
@@ -1047,6 +1047,26 @@ def test_narrow_and_optionality(reverse):
     pipeline = compose("t", *ops, outputs=["sum2"])
     with pytest.raises(ValueError, match="Unsolvable graph:"):
         pipeline.compute({"bb": 11})
+
+
+def test_solution_accessor_simple():
+    def f(*a):
+        breakpoint()
+        return a
+
+    acc = (getitem, setitem)
+
+    copy_values = compose(
+        "copy values in solution: a+b-->A+BB",
+        operation(
+            (lambda *a: a),
+            needs=[accessor("a", acc), accessor("b", acc)],
+            provides=[accessor("A", acc), accessor("BB", acc)],
+        ),
+    )
+    copy_values.plot("t.pdf")
+    sol = copy_values.compute({"a": 1, "b": 2})
+    assert sol == {"a": 1, "b": 2, "A": 1, "BB": 2}
 
 
 # Function without return value.
