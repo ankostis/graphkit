@@ -87,19 +87,26 @@ class _Optionals(enum.Enum):
 
 
 class Accessor(NamedTuple):
-    """Getter/setter functions to extract/populate solution values. """
+    """
+    :term:`accessor` with getter/setter functions to extract/populate solution values.
 
-    #: like:: ``get(sol, key) -> value``
+    plus one more (optional) to derive the :term:`dependency` name
+    (verbatim if not given).
+    """
+
+    #: the getter, like:: ``get(sol, key) -> value``
     get: Callable[["Solution", str], Any]
-    #: like: ``set(sol, key, val)``
+    #: the setter, like: ``set(sol, key, val)``
     set: Callable[["Solution", str, Any], None]
+    #: Derive the dependency name,like: name(my_modified_dep) -> dep
+    dep: Callable[[str], str] = lambda d: d
 
     def validate(self):
         """Call me early to fail asap (if it must); returns self instance. """
 
-        if not callable(self.get) or not callable(self.set):
+        if not callable(self.get) or not callable(self.set) or not callable(self.dep):
             raise TypeError(
-                f"`get/set` must be callable, were: {self.get!r}, {self.set!r}"
+                f"`get/set` must be callable, were: {self.get!r}, {self.set!r}, {self.dep!r}"
             )
         return self
 
@@ -140,8 +147,9 @@ class _Modifier(str):
     #: :func:`is_optional()` returns it.
     #: All regulars are `keyword`.
     optional: _Optionals
-    #: :term:`accessor` get/set functions to get value out of and into solution,
-    #: any sequence of 2-callables will do.
+    #: An :term:`accessor` get/setfunctions to get value out of and into solution,
+    #: plus one more (optional) to derive the dependency name.
+    #: Any sequence of 2-or-3 callables will do.
     accessor: Accessor
     #: Has value only for sideffects: the pure-sideffect string or
     #: the existing :term:`sideffected` dependency.
@@ -430,6 +438,30 @@ def accessor(name: str, accessor: Accessor = None) -> _Modifier:
         (actually a 2-tuple with functions is ok)
 
     Use other modifier factories for combinations with `optional`, `keyword`, etc.
+
+    **Example:**
+
+    Let's use :class:`.JsonPointerAccessor` along with the default :term:`conveyor function`
+    to copy values around in the solution:
+
+        >>> from graphtik import operation, compose, accessor
+        >>> from graphtik.util import JsonPointerAccessor as jsonp
+
+        >>> copy_values = operation(
+        ...     "copy values in solution: a+b-->A+BB",
+        ...     needs=[
+        ...            accessor("inputs/a", jsonp),
+        ...            accessor("inputs/b", jsonp)],
+        ...     provides=[
+        ...               accessor("RESULTS/A", jsonp),
+        ...               accessor("RESULTS/BB", jsonp)]
+        ... )
+
+        >>> sol = copy_values.compute({"inputs": {"a": 1, "b": 2}}, outputs="RESULTS")
+        >>> sol
+        {"RESULTS": {"A": 1, "BB": 2}}
+
+    .. graphtik::
     """
     return _modifier(name, accessor=accessor)
 

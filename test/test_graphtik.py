@@ -1069,6 +1069,27 @@ def test_solution_accessor_simple():
     assert sol == {"a": 1, "b": 2, "A": 1, "BB": 2}
 
 
+def test_solution_accessor_dep_conversion():
+    def f(*a):
+        breakpoint()
+        return a
+
+    acc = (getitem, setitem, lambda dep: 2*dep)
+
+    copy_values = compose(
+        "copy values in solution: a+b-->A+BB",
+        operation(
+            (lambda *a: a),
+            needs=[accessor("a", acc), accessor("b", acc)],
+            provides=[accessor("A", acc), accessor("BB", acc)],
+        ),
+    )
+    assert tuple(copy_values.needs) == ('aa', 'bb')
+    copy_values.plot("t.pdf")
+    sol = copy_values.compute({"aa": 1, "bb": 2})
+    assert sol == {"aa": 1, "bb": 2, "A": 1, "BB": 2}
+
+
 # Function without return value.
 def _box_extend(box, *args):
     box.extend([1, 2])
