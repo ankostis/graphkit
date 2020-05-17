@@ -15,15 +15,15 @@ The `needs` and `provides` annotated with *modifiers* designate, for instance,
 
 .. diacritics-start
 
-When printed, *modifiers* annotate regular or sideffect dependencies with
-these **diacritics**:
+The :meth:`representation <._Modifier.__repr__>` of modifier-annotated dependencies
+utilize a combination of these **diacritics**:
 
 .. parsed-literal::
 
-    >   : :func:`keyword` (fn_keyword)
-    ?   : :func:`optional` (fn_keyword)
-    *   : :func:`vararg`
-    +   : :func:`varargs`
+    >   : :func:`.keyword`
+    ?   : :func:`.optional`
+    *   : :func:`.vararg`
+    +   : :func:`.varargs`
     $   : :term:`accessor`
 
 .. diacritics-end
@@ -210,6 +210,7 @@ class _Modifier(str):
         return obj
 
     def __repr__(self):
+        """Note that modifiers have different ``repr()`` from ``str()``."""
         return self._repr
 
     @property
