@@ -185,6 +185,7 @@ def linkcode_resolve(domain, info):
 
 rst_prolog = """
 .. include:: <s5defs.txt>
+.. include:: <isopub.txt>
 .. default-role::
 .. _Graphkit: https://github.com/yahoo/graphkit
 .. _Graphviz: https://graphviz.org

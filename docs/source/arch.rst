@@ -266,6 +266,10 @@ Architecture
 
           These matchings are affected by `modifier`\s, print-out with `diacritic`\s.
 
+        .. include:: ../../graphtik/op.py
+            :start-after: .. dep-attributes-start
+            :end-before: .. dep-attributes-end
+
     needs
     fn_needs
         The list of `dependency` names an `operation` requires from `solution` as `inputs`,

@@ -223,6 +223,29 @@ class FunctionalOperation(Operation):
         - Use :func:`.operation()` factory to build instances of this class instead.
         - Call :meth:`withset()` on existing instances to re-configure new clones.
         - See :term:`diacritic`\\s to understand printouts of this class.
+
+    .. dep-attributes-start
+
+    Differences between various dependency operation attributes:
+
+    +--------------------------+-------+-------+------+-------+
+    |   dependency attribute   |DUPES  |SFX    |SFXED |ALIASES|
+    +==========+===============+=======+=======+======+=======+
+    |          |**needs**      ||check|||check||SINGLE|       |
+    +          +---------------+-------+-------+------+       |
+    | *needs*  |**op_needs**   ||cross|||check||SINGLE|       |
+    +          +---------------+-------+-------+------+       |
+    |          |**fn_needs**   ||check|||cross||STRIP |       |
+    +----------+---------------+-------+-------+------+-------+
+    |          |**provides**   ||check|||check||SINGLE||cross||
+    +          +---------------+-------+-------+------+-------+
+    |*provides*|**op_provides**||cross|||check||SINGLE||check||
+    +          +---------------+-------+-------+------+-------+
+    |          |**fn_provides**||check|||cross||STRIP ||cross||
+    +----------+---------------+-------+-------+------+-------+
+
+    ..
+    .. dep-attributes-end
     """
 
     def __init__(
@@ -279,27 +302,27 @@ class FunctionalOperation(Operation):
         #: The :term:`needs` almost as given by the user
         #: (which may contain MULTI-sideffecteds and dupes),
         #: roughly morphed into `_fn_provides` + sideffects
-        #: (dupes preserved, with sideffects & SINGULARIZED :term:`sideffected`\s).
+        #: (DUPES, SFX, SINGULARIZED :term:`sideffected`\s).
         #: It is stored for builder functionality to work.
         self.needs = needs
         #: Value names ready to lay the graph for :term:`pruning`
-        #: (NO dupes, WITH aliases & sideffects, and SINGULAR :term:`sideffected`\s).
+        #: (NO-DUPES, SFX, SINGULAR :term:`sideffected`\s).
         self.op_needs = op_needs
         #: Value names the underlying function requires
-        #: (dupes preserved, without sideffects, with stripped :term:`sideffected` dependencies).
+        #: (DUPES preserved, NO-SFX, STRIPPED :term:`sideffected`).
         self._fn_needs = _fn_needs
 
         #: The :term:`provides` almost as given by the user
         #: (which may contain MULTI-sideffecteds and dupes),
         #: roughly morphed into `_fn_provides` + sideffects
-        #: (dupes preserved, without aliases, with sideffects & SINGULARIZED :term:`sideffected`\s).
+        #: (DUPES, NO-ALIASES, SFX, SINGULAR :term:`sideffected`\s).
         #: It is stored for builder functionality to work.
         self.provides = provides
         #: Value names ready to lay the graph for :term:`pruning`
-        #: (NO dupes, WITH aliases & sideffects, and SINGULAR sideffecteds).
+        #: (NO DUPES, ALIASES, SFX, SINGULAR sideffecteds).
         self.op_provides = op_provides
         #: Value names the underlying function produces
-        #: (dupes preserved, without aliases & sideffects, with stripped :term:`sideffected` dependencies).
+        #: (DUPES, NO-ALIASES, NO_SFX, STRIPPED :term:`sideffected`).
         self._fn_provides = _fn_provides
         #: an optional mapping of `fn_provides` to additional ones, together
         #: comprising this operations :term:`op_provides`.
