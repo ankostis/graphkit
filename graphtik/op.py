@@ -19,6 +19,7 @@ from typing import (
     Callable,
     Collection,
     Hashable,
+    Iterable,
     List,
     Mapping,
     Tuple,
@@ -653,7 +654,7 @@ class FunctionalOperation(Operation):
 
         return positional, vararg_vals, kwargs
 
-    def _zip_results_with_provides(self, results) -> dict:
+    def _zip_results_with_provides(self, results) -> Iterable:
         """Zip results with expected "real" (without sideffects) `provides`."""
         from .config import is_reschedule_operations
 
@@ -661,24 +662,28 @@ class FunctionalOperation(Operation):
         rescheduled = first_solid(is_reschedule_operations(), self.rescheduled)
         if self.returns_dict:
 
-            if hasattr(results, "_asdict"):  # named tuple
-                results = results._asdict()
+            if not results:
+                if not hasattr(results, "keys"):
+                    res_names = values = {}
+            elif hasattr(results, "_asdict"):  # named tuple
+                res_names, values = zip(*results._asdict().items())
             elif isinstance(results, cabc.Mapping):
-                pass
+                res_names, values = zip(*results.items())
             elif hasattr(results, "__dict__"):  # regular object
-                results = vars(results)
+                res_names, values = zip(*vars(results).items())
             else:
-                raise ValueError(
-                    "Expected results as mapping, named_tuple, object, "
-                    f"got {type(results).__name__!r}: {results}\n  {self}"
-                )
+                try:
+                    res_names, values = zip(*results)
+                except Exception as ex:
+                    raise ValueError(
+                        "Expected results as mapping, named_tuple, object or zip, "
+                        f"got {type(results).__name__!r}: {results}\n  {self}\n  zip error: {ex}"
+                    ) from ex
 
             fn_required = fn_expected
             if rescheduled:
                 # Canceled sfx are welcomed.
                 fn_expected = iset(self.provides)
-
-            res_names = results.keys()
 
             ## Allow unknown outs when dict,
             #  bc we can safely ignore them (and it's handy for reuse).
@@ -774,17 +779,17 @@ class FunctionalOperation(Operation):
                     self,
                 )
 
-            results = dict(zip(fn_expected, results))  # , fillvalue=UNSET))
+            results = zip(fn_expected, results)
 
         assert isinstance(
-            results, cabc.Mapping
+            results, cabc.Sequence
         ), f"Abnormal results type {type(results).__name__!r}: {results}!"
 
         if self.aliases:
             alias_values = [
                 (dst, results[src]) for src, dst in self.aliases if src in results
             ]
-            results.update(alias_values)
+            results = [*results, *alias_values]
 
         return results
 
@@ -810,9 +815,9 @@ class FunctionalOperation(Operation):
             #
             if outputs:
                 outputs = set(n for n in outputs)
-                results_op = {
-                    key: val for key, val in results_op.items() if key in outputs
-                }
+                results_op = [
+                    (key, val) for key, val in results_op.items() if key in outputs
+                ]
 
             return results_op
         except Exception as ex:
