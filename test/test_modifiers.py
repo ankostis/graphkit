@@ -20,12 +20,7 @@ from graphtik.modifiers import (
 )
 
 
-class trivial(Accessor):
-    def __str__(self):
-        return "acc"
-
-
-acc = trivial(getitem, setitem)
+acc = Accessor(getitem, setitem)
 
 
 def test_serialize_modifier(ser_method):
@@ -53,6 +48,7 @@ def test_serialize_modifier(ser_method):
         (lambda: sfxed("f", "ff", optional=1), "sfxed('f', 'ff')"),
         ## Accessor
         #
+        (lambda: accessor("b", acc), "b"),
         (lambda: keyword("b", None, acc), "b"),
         (lambda: keyword("b", "", accessor=acc), "b"),
         (lambda: optional("b", "bb", acc), "b"),
@@ -77,7 +73,7 @@ def test_modifs_str(mod, exp):
 @pytest.mark.parametrize(
     "mod, exp",
     [
-        (lambda: accessor("b", acc), "'b'($acc)"),
+        (lambda: accessor("b", acc), "'b'($)"),
         (lambda: keyword("b", None), "'b'(>)"),
         (lambda: keyword("b", ""), "'b'(>)"),
         (lambda: keyword("b", "bb"), "'b'(>'bb')"),
@@ -94,30 +90,27 @@ def test_modifs_str(mod, exp):
         (lambda: sfxed_vararg("f", "a"), "sfxed('f'(*), 'a')"),
         (lambda: sfxed_varargs("f", "a", "b"), "sfxed('f'(+), 'a', 'b')"),
         # Accessor
-        (lambda: keyword("b", None, acc), "'b'(>, $acc)"),
-        (lambda: keyword("b", "", acc), "'b'(>, $acc)"),
-        (lambda: keyword("b", "bb", acc), "'b'(>'bb', $acc)"),
-        (lambda: optional("b", accessor=acc), "'b'(?, $acc)"),
-        (lambda: optional("b", "bb", acc), "'b'(?'bb', $acc)"),
-        (lambda: vararg("c", acc), "'c'(*$acc)"),
-        (lambda: varargs("d", acc), "'d'(+$acc)"),
-        (lambda: sfxed("f", "a", "b", accessor=acc), "sfxed('f'($acc), 'a', 'b')"),
+        (lambda: keyword("b", None, acc), "'b'($>)"),
+        (lambda: keyword("b", "", acc), "'b'($>)"),
+        (lambda: keyword("b", "bb", acc), "'b'($>'bb')"),
+        (lambda: optional("b", accessor=acc), "'b'($?)"),
+        (lambda: optional("b", "bb", acc), "'b'($?'bb')"),
+        (lambda: vararg("c", acc), "'c'($*)"),
+        (lambda: varargs("d", acc), "'d'($+)"),
+        (lambda: sfxed("f", "a", "b", accessor=acc), "sfxed('f'($), 'a', 'b')"),
         (
             lambda: sfxed("f", "ff", keyword="F", accessor=acc),
-            "sfxed('f'(>'F', $acc), 'ff')",
+            "sfxed('f'($>'F'), 'ff')",
         ),
         (
             lambda: sfxed("f", "ff", optional=1, keyword="F", accessor=acc),
-            "sfxed('f'(?'F', $acc), 'ff')",
+            "sfxed('f'($?'F'), 'ff')",
         ),
-        (
-            lambda: sfxed("f", "ff", optional=1, accessor=acc),
-            "sfxed('f'(?, $acc), 'ff')",
-        ),
-        (lambda: sfxed_vararg("f", "a", accessor=acc), "sfxed('f'(*$acc), 'a')"),
+        (lambda: sfxed("f", "ff", optional=1, accessor=acc), "sfxed('f'($?), 'ff')",),
+        (lambda: sfxed_vararg("f", "a", accessor=acc), "sfxed('f'($*), 'a')"),
         (
             lambda: sfxed_varargs("f", "a", "b", accessor=acc),
-            "sfxed('f'(+$acc), 'a', 'b')",
+            "sfxed('f'($+), 'a', 'b')",
         ),
     ],
 )
@@ -133,14 +126,14 @@ def test_modifs_repr(mod, exp, ser_method):
     [
         (
             accessor("b", acc),
-            "accessor('b', accessor=trivial(get=<built-in function getitem>, set=<built-in function setitem>))",
+            "accessor('b', accessor=Accessor(get=<built-in function getitem>, set=<built-in function setitem>))",
         ),
         (keyword("b", None), "keyword('b')"),
         (keyword("b", ""), "keyword('b')"),
         (keyword("b", "bb"), "keyword('b', 'bb')"),
         (
             keyword("b", "bb", acc),
-            "keyword('b', 'bb', accessor=trivial(get=<built-in function getitem>, set=<built-in function setitem>))",
+            "keyword('b', 'bb', accessor=Accessor(get=<built-in function getitem>, set=<built-in function setitem>))",
         ),
         (optional("b"), "optional('b')"),
         (optional("b", "bb"), "optional('b', 'bb')"),
@@ -204,7 +197,7 @@ def test_sideffected_bad(call, exp):
         (keyword("b", "bb"), "'p.b'(>'bb')"),
         (optional("b"), "'p.b'(?'b')"),
         (optional("b", "bb"), "'p.b'(?'bb')"),
-        (accessor("b", acc), "'p.b'($acc)"),
+        (accessor("b", acc), "'p.b'($)"),
         (vararg("c"), "'p.c'(*)"),
         (varargs("d"), "'p.d'(+)"),
         (sfx("e"), "sfx('p.e')"),
@@ -213,7 +206,7 @@ def test_sideffected_bad(call, exp):
         (sfxed("f", "ff", keyword="F"), "sfxed('p.f'(>'F'), 'ff')",),
         (sfxed("f", "ff", optional=1, keyword="F"), "sfxed('p.f'(?'F'), 'ff')",),
         (sfxed("f", "ff", optional=1), "sfxed('p.f'(?'f'), 'ff')",),
-        (sfxed("f", "ff", optional=1, accessor=acc), "sfxed('p.f'(?'f', $acc), 'ff')",),
+        (sfxed("f", "ff", optional=1, accessor=acc), "sfxed('p.f'($?'f'), 'ff')",),
         (sfxed_vararg("f", "a", "b"), "sfxed('p.f'(*), 'a', 'b')"),
         (sfxed_varargs("f", "a"), "sfxed('p.f'(+), 'a')"),
     ],
@@ -235,7 +228,7 @@ def test_modifs_rename_fn(mod, exp):
         (lambda: keyword("b", "bb"), "'D'(>'bb')"),
         (lambda: optional("b"), "'D'(?'b')"),
         (lambda: optional("b", "bb"), "'D'(?'bb')"),
-        (lambda: accessor("b", acc), "'D'($acc)"),
+        (lambda: accessor("b", acc), "'D'($)"),
         (lambda: vararg("c"), "'D'(*)"),
         (lambda: varargs("d"), "'D'(+)"),
         (lambda: sfx("e"), "sfx('D')"),
@@ -265,13 +258,13 @@ def test_modifs_rename_str(mod, exp, ser_method):
         (sfxed_vararg("f", "a"), "'f'(*)"),
         (sfxed_varargs("f", "a", "b"), "'f'(+)"),
         # Accessor
-        (varargs("d", acc), "'d'(+$acc)"),
-        (sfxed("f", "a", "b", accessor=acc), "'f'($acc)"),
-        (sfxed("f", "ff", keyword="F", accessor=acc), "'f'(>'F', $acc)",),
-        (sfxed("f", "ff", optional=1, keyword="F", accessor=acc), "'f'(?'F', $acc)",),
-        (sfxed("f", "ff", optional=1, accessor=acc), "'f'(?, $acc)"),
-        (sfxed_vararg("f", "a", accessor=acc), "'f'(*$acc)"),
-        (sfxed_varargs("f", "a", "b", accessor=acc), "'f'(+$acc)"),
+        (varargs("d", acc), "'d'($+)"),
+        (sfxed("f", "a", "b", accessor=acc), "'f'($)"),
+        (sfxed("f", "ff", keyword="F", accessor=acc), "'f'($>'F')",),
+        (sfxed("f", "ff", optional=1, keyword="F", accessor=acc), "'f'($?'F')",),
+        (sfxed("f", "ff", optional=1, accessor=acc), "'f'($?)"),
+        (sfxed_vararg("f", "a", accessor=acc), "'f'($*)"),
+        (sfxed_varargs("f", "a", "b", accessor=acc), "'f'($+)"),
     ],
 )
 def test_sideffected_strip(mod, exp):

@@ -37,31 +37,31 @@ from typing import Any, Callable, Iterable, NamedTuple, Optional, Tuple, Union
 _modifier_cstor_matrix = {
 # (7, kw, opt, acs, sfxed, sfx): (STR, REPR, FUNC) OR None
 700000: None,
-710000: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s)",           "keyword"),
-711000: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s)",           "optional"),
+710000: (       "%(dep)s",                  "'%(dep)s'(%(acs)s>%(kw)s)",    "keyword"),
+711000: (       "%(dep)s",                  "'%(dep)s'(%(acs)s?%(kw)s)",    "optional"),
 702000: (       "%(dep)s",                  "'%(dep)s'(*)",                 "vararg"),
 703000: (       "%(dep)s",                  "'%(dep)s'(+)",                 "varargs"),
 # Accessor
-700100: (       "%(dep)s",                  "'%(dep)s'($%(acs)s)",          "accessor"),
-710100: (       "%(dep)s",                  "'%(dep)s'(>%(kw)s, $%(acs)s)", "keyword"),
-711100: (       "%(dep)s",                  "'%(dep)s'(?%(kw)s, $%(acs)s)", "optional"),
-702100: (       "%(dep)s",                  "'%(dep)s'(*$%(acs)s)",         "vararg"),
-703100: (       "%(dep)s",                  "'%(dep)s'(+$%(acs)s)",         "varargs"),
+700100: (       "%(dep)s",                  "'%(dep)s'($)",                 "accessor"),
+710100: (       "%(dep)s",                  "'%(dep)s'($>%(kw)s)",          "keyword"),
+711100: (       "%(dep)s",                  "'%(dep)s'($?%(kw)s)",          "optional"),
+702100: (       "%(dep)s",                  "'%(dep)s'($*)",                "vararg"),
+703100: (       "%(dep)s",                  "'%(dep)s'($+)",                "varargs"),
 
-700010: (  "sfx('%(dep)s')",            "sfx('%(dep)s')",                   "sfx"),
-701010: (  "sfx('%(dep)s')",            "sfx('%(dep)s'(?))",                "sfx"),
+700010: (  "sfx('%(dep)s')",            "sfx('%(dep)s')",    "sfx"),
+701010: (  "sfx('%(dep)s')",            "sfx('%(dep)s'(?))", "sfx"),
 #SFXED
-700011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s', %(sfx)s)",          "sfxed"),
-710011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s), %(sfx)s)", "sfxed"),
-711011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s), %(sfx)s)", "sfxed"),
-702011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*), %(sfx)s)",       "sfxed_vararg"),
-703011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+), %(sfx)s)",       "sfxed_varargs"),
+700011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed(%(acs)s'%(dep)s', %(sfx)s)",           "sfxed"),
+710011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed(%(acs)s'%(dep)s'(>%(kw)s), %(sfx)s)",  "sfxed"),
+711011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed(%(acs)s'%(dep)s'(?%(kw)s), %(sfx)s)",  "sfxed"),
+702011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed(%(acs)s'%(dep)s'(*), %(sfx)s)",        "sfxed_vararg"),
+703011: ("sfxed('%(dep)s', %(sfx)s)", "sfxed(%(acs)s'%(dep)s'(+), %(sfx)s)",        "sfxed_varargs"),
 # Accessor
-700111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($%(acs)s), %(sfx)s)",          "sfxed"),
-710111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(>%(kw)s, $%(acs)s), %(sfx)s)",  "sfxed"),
-711111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(?%(kw)s, $%(acs)s), %(sfx)s)", "sfxed"),
-702111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(*$%(acs)s), %(sfx)s)",         "sfxed_vararg"),
-703111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'(+$%(acs)s), %(sfx)s)",         "sfxed_varargs"),
+700111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($), %(sfx)s)",               "sfxed"),
+710111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($>%(kw)s), %(sfx)s)",        "sfxed"),
+711111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($?%(kw)s), %(sfx)s)",        "sfxed"),
+702111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($*), %(sfx)s)",              "sfxed_vararg"),
+703111: ("sfxed('%(dep)s', %(sfx)s)", "sfxed('%(dep)s'($+), %(sfx)s)",              "sfxed_varargs"),
 }
 # fmt: on
 
@@ -108,8 +108,8 @@ class _Modifier(str):
     """
     Annotate a :term:`dependency` with a combination of :term:`modifier`.
 
-    This class is private, because client code should never need to call its cstor,
-    or check if a dependency ``isinstance()``, but use facilities these instead:
+    This class is private, because client code should not need to call its cstor,
+    or check if a dependency ``isinstance()``, but use these facilities instead:
 
     - the *factory* functions like :func:`.keyword`, :func:`optional` etc,
     - the *predicates* like :func:`is_optional()`, :func:`is_pure_sfx()` etc,
@@ -287,7 +287,7 @@ def _modifier(
         "dep": name,
         "kw": f"'{keyword}'" if keyword != name else "",
         "sfx": ", ".join(f"'{i}'" for i in sfx_list),
-        "acs": accessor,
+        "acs": "$" if accessor else "",
     }
     name = str_fmt % fmt_args
     _repr = repr_fmt % fmt_args
