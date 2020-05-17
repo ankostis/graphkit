@@ -245,24 +245,27 @@ class FunctionalOperation(Operation):
 
     Differences between various dependency operation attributes:
 
-    +--------------------------+-------+-------+------+-------+
-    |   dependency attribute   |DUPES  |SFX    |SFXED |ALIASES|
-    +==========+===============+=======+=======+======+=======+
-    |          |**needs**      ||check|||check||SINGLE|       |
-    +          +---------------+-------+-------+------+       |
-    | *needs*  |**op_needs**   ||cross|||check||SINGLE|       |
-    +          +---------------+-------+-------+------+       |
-    |          |**fn_needs**   ||check|||cross||STRIP |       |
-    +----------+---------------+-------+-------+------+-------+
-    |          |**provides**   ||check|||check||SINGLE||cross||
-    +          +---------------+-------+-------+------+-------+
-    |*provides*|**op_provides**||cross|||check||SINGLE||check||
-    +          +---------------+-------+-------+------+-------+
-    |          |**fn_provides**||check|||cross||STRIP ||cross||
-    +----------+---------------+-------+-------+------+-------+
+    +--------------------------+-----+-----+-----+-------+
+    |   dependency attribute   |dupes|sfx  |alias| SFXED |
+    +==========+===============+=====+=====+=====+=======+
+    |          |  **needs**    ||yes|||yes||     |SINGLAR|
+    +          +---------------+-----+-----+     +-------+
+    | *needs*  | **op_needs**  ||no| ||yes||     |SINGLAR|
+    +          +---------------+-----+-----+     +-------+
+    |          |  *_fn_needs*  ||yes|||no| |     | STRIP |
+    +----------+---------------+-----+-----+-----+-------+
+    |          | **provides**  ||yes|||yes|||no| |SINGLAR|
+    +          +---------------+-----+-----+-----+-------+
+    |*provides*|**op_provides**||no| ||yes|||yes||SINGLAR|
+    +          +---------------+-----+-----+-----+-------+
+    |          |*_fn_provides* ||yes|||no| ||no| | STRIP |
+    +----------+---------------+-----+-----+-----+-------+
 
-    ..
+    .. |yes| replace:: :green:`✓`
+    .. |no| replace:: :red:`✗`
+
     .. dep-attributes-end
+
     """
 
     def __init__(
