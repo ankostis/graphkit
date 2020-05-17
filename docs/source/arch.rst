@@ -305,6 +305,16 @@ Architecture
 
         You cannot alias an *alias*.  See :ref:`aliases`
 
+    conveyor operation
+    default identity function
+        The default function if none given to an `operation` that conveys `needs` to `provides`.
+
+        For this to happen when :meth:`.FunctionalOperation.compute()` is called,
+        an operation *name* must have been given AND the number of `provides` must match
+        that of the number of `needs`.
+
+        :seealso: :ref:`conveyor-function` & :func:`.identity_function()`.
+
     returns dictionary
         When an `operation` is marked with :attr:`FunctionalOperation.returns_dict` flag,
         the underlying function is not expected to return `fn_provides` as a sequence

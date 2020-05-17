@@ -68,6 +68,23 @@ NO_RESULT = Token("NO_RESULT")
 NO_RESULT_BUT_SFX = Token("NO_RESULT_BUT_SFX")
 
 
+def identity_fn(*args, **kwargs):
+    """
+    Act as the default function for the :term:`conveyor operation` when no `fn` is given.
+
+    Adapted from https://stackoverflow.com/a/58524115/548792
+    """
+    if not args:
+        if not kwargs:
+            return None
+        vals = kwargs.values()
+        return next(iter(vals)) if len(kwargs) == 1 else (*vals,)
+    elif not kwargs:
+        return args[0] if len(args) == 1 else args
+    else:
+        return (*args, *kwargs.values())
+
+
 def as_renames(i, argname):
     """
     Parses a list of (source-->destination) from dict, list-of-2-items, single 2-tuple.
@@ -291,6 +308,16 @@ class FunctionalOperation(Operation):
         op_needs = iset(needs)
         alias_dst = aliases and tuple(dst for _src, dst in aliases)
         op_provides = iset(itt.chain(provides, alias_dst))
+
+        # TODO: enact conveyor fn if varargs in the outputs.
+        if fn is None and name and len(_fn_needs) == len(_fn_provides):
+            log.debug(
+                "Auto-setting conveyor identity function on op(%s) for needs(%s) --> provides(%s)",
+                name,
+                needs,
+                provides,
+            )
+            fn = identity_fn
 
         #: The :term:`operation`'s underlying function.
         self.fn = fn
@@ -854,6 +881,11 @@ def operation(
 
         After all that, you can always call :meth:`FunctionalOperation.withset()`
         on existing operation, to obtain a re-configured clone.
+
+        If the `fn` is still not given when calling :meth:`.FunctionalOperation.compute()`,
+        then :term:`default identity function` is implied, if `name` is given and the number of
+        `provides` match the number of `needs`.
+
     :param str name:
         The name of the operation in the computation graph.
         If not given, deduce from any `fn` given.

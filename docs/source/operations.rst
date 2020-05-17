@@ -191,6 +191,32 @@ by :term:`alias`\sing certain `provides` to different names:
 .. graphtik::
 
 
+.. _conveyor-function:
+
+Default conveyor operation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+If you don't specify a callable, the :term:`default identity function` get assigned,
+as long a `name` for the operation is given, and the number of `needs` matches
+the number of `provides`.
+
+This facilitates conveying :term:`inputs` into renamed :term:`outputs` without the need
+to define a trivial *identity function* matching the `needs` & `provides` each time:
+
+    >>> from graphtik import keyword, optional, vararg
+    >>> op = operation(
+    ...     name="a",
+    ...     needs=[optional("opt"), vararg("vararg"), "pos", keyword("kw")],
+    ...     # positional vararg, keyword, optional
+    ...     provides=["pos", "vararg", "kw", "opt"],
+    ... )()
+    >>> op(opt=5, vararg=6, pos=7, kw=8)
+    {'pos': 7, 'vararg': 6, 'kw': 5, 'opt': 8}
+
+Notice that the order of the results is not that of the `needs`
+(or that of the `inputs` in the ``compute()`` method), but, as explained in the comment-line,
+it follows Python semantics.
+
+
 Considerations for when building pipelines
 ------------------------------------------
 When many operations are composed into a computation graph, Graphtik matches up

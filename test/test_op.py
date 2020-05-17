@@ -14,9 +14,11 @@ from graphtik import (
     NO_RESULT,
     NO_RESULT_BUT_SFX,
     compose,
+    keyword,
     operation,
     optional,
     sfx,
+    sfxed,
     vararg,
     varargs,
 )
@@ -83,7 +85,7 @@ def test_builder_pattern():
 
     assert str(opb(sum)) == "FunctionalOperation(name='sum', fn='sum')"
 
-    assert str(opb(name="K")) == "FunctionalOperation(name='K', fn=None)"
+    assert str(opb(name="K")) == "FunctionalOperation(name='K', fn='identity_fn')"
 
     op = opb.withset(needs=["a", "b"])
     assert isinstance(op, FunctionalOperation)
@@ -632,3 +634,36 @@ def test_pipe_rename():
          aliases=[('a'(?), 'B')], fn='str')]
         """.strip(),
     )
+
+
+def test_conveyor_identity_fn():
+    op = operation(name="copy values", needs="a")()
+    assert not op.fn
+    op = operation(needs="a", provides="A")()
+    assert not op.fn
+
+    op = operation(name="a", needs="a", provides="A")()
+    assert op.fn
+    assert op(a=5) == {"A": 5}
+
+    op = operation(name="a", needs=["a", "b"], provides=["A", "B"])()
+    assert op.compute({"a": 5, "b": 6}) == {"A": 5, "B": 6}
+
+    op = operation(name="a", needs=["a", keyword("b")], provides=["A", "B"])()
+    assert op(a=55, b=66) == {"A": 55, "B": 66}
+
+    op = operation(
+        name="a",
+        needs=[optional("a"), vararg("b"), "c"],
+        # positional, vararg, keyword, optional
+        provides=["C", "B", "A"],
+    )()
+    assert op(c=7, a=5, b=6) == {"A": 5, "B": 6, "C": 7}
+
+    # TODO: when `varargs` work for Outputs.
+    # op = operation(
+    #     name="a", needs=[sfxed("a", 's'), optional=1), sfxed_varargs("b", 's'), "c"],
+    #     # vararg, keyword, optional
+    #     provides=["C", "B", "A", varargs(sadasa"b", 's')]
+    # )()
+    # assert op(c=7, a=5, b=[6]) == {"A": 5, "B1": [6], "B2", "C": 7}
