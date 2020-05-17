@@ -125,35 +125,35 @@ def test_modifs_repr(mod, exp, ser_method):
     "mod, exp",
     [
         (
-            accessor("b", acc),
+            lambda: accessor("b", acc),
             "accessor('b', accessor=Accessor(get=<built-in function getitem>, set=<built-in function setitem>))",
         ),
-        (keyword("b", None), "keyword('b')"),
-        (keyword("b", ""), "keyword('b')"),
-        (keyword("b", "bb"), "keyword('b', 'bb')"),
+        (lambda: keyword("b", None), "keyword('b')"),
+        (lambda: keyword("b", ""), "keyword('b')"),
+        (lambda: keyword("b", "bb"), "keyword('b', 'bb')"),
         (
-            keyword("b", "bb", acc),
+            lambda: keyword("b", "bb", acc),
             "keyword('b', 'bb', accessor=Accessor(get=<built-in function getitem>, set=<built-in function setitem>))",
         ),
-        (optional("b"), "optional('b')"),
-        (optional("b", "bb"), "optional('b', 'bb')"),
-        (vararg("c"), "vararg('c')"),
-        (varargs("d"), "varargs('d')"),
-        (sfx("e"), "sfx('e')"),
-        (sfx("e", optional=1), "sfx('e', 1)"),
-        (sfxed("f", "a", "b"), "sfxed('f', 'a', 'b')"),
-        (sfxed("f", "ff", keyword="F"), "sfxed('f', 'ff', keyword='F')",),
+        (lambda: optional("b"), "optional('b')"),
+        (lambda: optional("b", "bb"), "optional('b', 'bb')"),
+        (lambda: vararg("c"), "vararg('c')"),
+        (lambda: varargs("d"), "varargs('d')"),
+        (lambda: sfx("e"), "sfx('e')"),
+        (lambda: sfx("e", optional=1), "sfx('e', 1)"),
+        (lambda: sfxed("f", "a", "b"), "sfxed('f', 'a', 'b')"),
+        (lambda: sfxed("f", "ff", keyword="F"), "sfxed('f', 'ff', keyword='F')",),
         (
-            sfxed("f", "ff", optional=1, keyword="F"),
+            lambda: sfxed("f", "ff", optional=1, keyword="F"),
             "sfxed('f', 'ff', keyword='F', optional=1)",
         ),
-        (sfxed("f", "ff", optional=1), "sfxed('f', 'ff', optional=1)"),
-        (sfxed_vararg("f", "a"), "sfxed_vararg('f', 'a')"),
-        (sfxed_varargs("f", "a", "b"), "sfxed_varargs('f', 'a', 'b')"),
+        (lambda: sfxed("f", "ff", optional=1), "sfxed('f', 'ff', optional=1)"),
+        (lambda: sfxed_vararg("f", "a"), "sfxed_vararg('f', 'a')"),
+        (lambda: sfxed_varargs("f", "a", "b"), "sfxed_varargs('f', 'a', 'b')"),
     ],
 )
 def test_modifs_cmd(mod, exp, ser_method):
-    got = mod.cmd
+    got = mod().cmd
     print(got)
     assert str(got) == exp
     assert str(ser_method(got)) == exp
@@ -191,29 +191,35 @@ def test_sideffected_bad(call, exp):
 @pytest.mark.parametrize(
     "mod, exp",
     [
-        ("b", "'p.b'"),
-        (keyword("b", None), "'p.b'(>'b')"),
-        (keyword("b", ""), "'p.b'(>'b')"),
-        (keyword("b", "bb"), "'p.b'(>'bb')"),
-        (optional("b"), "'p.b'(?'b')"),
-        (optional("b", "bb"), "'p.b'(?'bb')"),
-        (accessor("b", acc), "'p.b'($)"),
-        (vararg("c"), "'p.c'(*)"),
-        (varargs("d"), "'p.d'(+)"),
-        (sfx("e"), "sfx('p.e')"),
-        (sfx("e", optional=1), "sfx('p.e'(?))"),
-        (sfxed("f", "a", "b"), "sfxed('p.f', 'a', 'b')",),
-        (sfxed("f", "ff", keyword="F"), "sfxed('p.f'(>'F'), 'ff')",),
-        (sfxed("f", "ff", optional=1, keyword="F"), "sfxed('p.f'(?'F'), 'ff')",),
-        (sfxed("f", "ff", optional=1), "sfxed('p.f'(?'f'), 'ff')",),
-        (sfxed("f", "ff", optional=1, accessor=acc), "sfxed('p.f'($?'f'), 'ff')",),
-        (sfxed_vararg("f", "a", "b"), "sfxed('p.f'(*), 'a', 'b')"),
-        (sfxed_varargs("f", "a"), "sfxed('p.f'(+), 'a')"),
+        (lambda: "b", "'p.b'"),
+        (lambda: keyword("b", None), "'p.b'(>'b')"),
+        (lambda: keyword("b", ""), "'p.b'(>'b')"),
+        (lambda: keyword("b", "bb"), "'p.b'(>'bb')"),
+        (lambda: optional("b"), "'p.b'(?'b')"),
+        (lambda: optional("b", "bb"), "'p.b'(?'bb')"),
+        (lambda: accessor("b", acc), "'p.b'($)"),
+        (lambda: vararg("c"), "'p.c'(*)"),
+        (lambda: varargs("d"), "'p.d'(+)"),
+        (lambda: sfx("e"), "sfx('p.e')"),
+        (lambda: sfx("e", optional=1), "sfx('p.e'(?))"),
+        (lambda: sfxed("f", "a", "b"), "sfxed('p.f', 'a', 'b')",),
+        (lambda: sfxed("f", "ff", keyword="F"), "sfxed('p.f'(>'F'), 'ff')",),
+        (
+            lambda: sfxed("f", "ff", optional=1, keyword="F"),
+            "sfxed('p.f'(?'F'), 'ff')",
+        ),
+        (lambda: sfxed("f", "ff", optional=1), "sfxed('p.f'(?'f'), 'ff')",),
+        (
+            lambda: sfxed("f", "ff", optional=1, accessor=acc),
+            "sfxed('p.f'($?'f'), 'ff')",
+        ),
+        (lambda: sfxed_vararg("f", "a", "b"), "sfxed('p.f'(*), 'a', 'b')"),
+        (lambda: sfxed_varargs("f", "a"), "sfxed('p.f'(+), 'a')"),
     ],
 )
 def test_modifs_rename_fn(mod, exp):
     renamer = lambda n: f"p.{n}"
-    got = repr(dep_renamed(mod, renamer))
+    got = repr(dep_renamed(mod(), renamer))
     print(got)
     assert got == exp
     if hasattr(got, "sideffected"):
@@ -249,26 +255,29 @@ def test_modifs_rename_str(mod, exp, ser_method):
 @pytest.mark.parametrize(
     "mod, exp",
     [
-        (varargs("d"), "'d'(+)"),
-        (sfx("e", optional=1), "sfx('e'(?))"),
-        (sfxed("f", "a", "b"), "'f'"),
-        (sfxed("f", "ff", keyword="F"), "'f'(>'F')",),
-        (sfxed("f", "ff", optional=1, keyword="F"), "'f'(?'F')",),
-        (sfxed("f", "ff", optional=1), "'f'(?)"),
-        (sfxed_vararg("f", "a"), "'f'(*)"),
-        (sfxed_varargs("f", "a", "b"), "'f'(+)"),
+        (lambda: varargs("d"), "'d'(+)"),
+        (lambda: sfx("e", optional=1), "sfx('e'(?))"),
+        (lambda: sfxed("f", "a", "b"), "'f'"),
+        (lambda: sfxed("f", "ff", keyword="F"), "'f'(>'F')",),
+        (lambda: sfxed("f", "ff", optional=1, keyword="F"), "'f'(?'F')",),
+        (lambda: sfxed("f", "ff", optional=1), "'f'(?)"),
+        (lambda: sfxed_vararg("f", "a"), "'f'(*)"),
+        (lambda: sfxed_varargs("f", "a", "b"), "'f'(+)"),
         # Accessor
-        (varargs("d", acc), "'d'($+)"),
-        (sfxed("f", "a", "b", accessor=acc), "'f'($)"),
-        (sfxed("f", "ff", keyword="F", accessor=acc), "'f'($>'F')",),
-        (sfxed("f", "ff", optional=1, keyword="F", accessor=acc), "'f'($?'F')",),
-        (sfxed("f", "ff", optional=1, accessor=acc), "'f'($?)"),
-        (sfxed_vararg("f", "a", accessor=acc), "'f'($*)"),
-        (sfxed_varargs("f", "a", "b", accessor=acc), "'f'($+)"),
+        (lambda: varargs("d", acc), "'d'($+)"),
+        (lambda: sfxed("f", "a", "b", accessor=acc), "'f'($)"),
+        (lambda: sfxed("f", "ff", keyword="F", accessor=acc), "'f'($>'F')",),
+        (
+            lambda: sfxed("f", "ff", optional=1, keyword="F", accessor=acc),
+            "'f'($?'F')",
+        ),
+        (lambda: sfxed("f", "ff", optional=1, accessor=acc), "'f'($?)"),
+        (lambda: sfxed_vararg("f", "a", accessor=acc), "'f'($*)"),
+        (lambda: sfxed_varargs("f", "a", "b", accessor=acc), "'f'($+)"),
     ],
 )
 def test_sideffected_strip(mod, exp):
-    got = dep_stripped(mod)
+    got = dep_stripped(mod())
     assert repr(got) == exp
 
 
