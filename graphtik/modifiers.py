@@ -89,9 +89,9 @@ class _Optionals(enum.Enum):
 class Accessor(NamedTuple):
     """Getter/setter functions to extract/populate solution values. """
 
-    #: like:: ``get(sol, key) -> value``
+    #: the getter, like:: ``get(sol, key) -> value``
     get: Callable[["Solution", str], Any]
-    #: like: ``set(sol, key, val)``
+    #: the setter, like: ``set(sol, key, val)``
     set: Callable[["Solution", str, Any], None]
 
     def validate(self):
@@ -122,30 +122,23 @@ class _Modifier(str):
         arg but ``name`` is given.
     """
 
-    # avoid __dict__ on instances
-    __slots__ = (
-        "keyword",
-        "optional",
-        "accessor",
-        "sideffected",
-        "sfx_list",
-        "_repr",
-        "_func",
-    )
-
+    #: pre-calculated representation
+    _repr: str
+    #: needed to reconstruct cstor code in :attr:`cmd`
+    _func: str
     #: Map my name in `needs` into this kw-argument of the function.
     #: :func:`get_keyword()` returns it.
-    keyword: str
+    keyword: str = None
     #: required is None, regular optional or varargish?
     #: :func:`is_optional()` returns it.
     #: All regulars are `keyword`.
-    optional: _Optionals
-    #: :term:`accessor` get/set functions to get value out of and into solution,
-    #: any sequence of 2-callables will do.
-    accessor: Accessor
+    optional: _Optionals = None
+    #: An :term:`accessor` with getter/setter functions to read/write solution values.
+    #: Any sequence of 2-callables will do.
+    accessor: Accessor = None
     #: Has value only for sideffects: the pure-sideffect string or
     #: the existing :term:`sideffected` dependency.
-    sideffected: str
+    sideffected: str = None
     #: At least one name(s) denoting the :term:`sideffects` modification(s) on
     #: the :term:`sideffected`, performed/required by the operation.
     #:
@@ -153,22 +146,18 @@ class _Modifier(str):
     #:    and :func:`is_pure_optional()` returns True.
     #: - If not empty :func:`is_sfxed()` returns true
     #:   (the :attr:`sideffected`).
-    sfx_list: Tuple[Union[str, None]]
-    #: pre-calculated representation
-    _repr: str
-    #: needed to reconstruct cstor code in :attr:`cmd`
-    _func: str
+    sfx_list: Tuple[Union[str, None]] = ()
 
     def __new__(
         cls,
         name,
+        _repr,
+        _func,
         keyword,
         optional: _Optionals,
         accessor,
         sideffected,
         sfx_list,
-        _repr,
-        _func,
     ) -> "_Modifier":
         """Warning, returns None! """
         ## sanity checks & preprocessing
@@ -201,13 +190,18 @@ class _Modifier(str):
             )
 
         obj = super().__new__(cls, name)
-        obj.keyword = keyword
-        obj.optional = optional
-        obj.accessor = accessor
-        obj.sideffected = sideffected
-        obj.sfx_list = sfx_list
         obj._repr = _repr
         obj._func = _func
+        if keyword:
+            obj.keyword = keyword
+        if optional:
+            obj.optional = optional
+        if accessor:
+            obj.accessor = accessor
+        if sideffected:
+            obj.sideffected = sideffected
+        if sfx_list:
+            obj.sfx_list = sfx_list
 
         return obj
 
@@ -233,13 +227,13 @@ class _Modifier(str):
     def __getnewargs__(self):
         return (
             str(self),
+            self._repr,
+            self._func,
             self.keyword,
             self.optional,
             self.accessor,
             self.sideffected,
             self.sfx_list,
-            self._repr,
-            self._func,
         )
 
     def _withset(
@@ -298,7 +292,7 @@ def _modifier(
     name = str_fmt % fmt_args
     _repr = repr_fmt % fmt_args
 
-    return _Modifier(name, *args[1:], _repr, func)
+    return _Modifier(name, _repr, func, *args[1:])
 
 
 def keyword(name: str, keyword: str = None, accessor: Accessor = None) -> _Modifier:
