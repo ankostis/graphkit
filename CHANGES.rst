@@ -42,11 +42,17 @@ Graphtik Changelog
       - [ ] Unify OpTask & FuncOp
       - [ ] function self-toggles `returns-dict` amidst execution.
   - [ ] break cycles with dijkstra; weights
-  - [ ] Merge tutorial (operations + composition)
   - [ ] Config DEBUG flags:
     - [ ] skip - evictions(drop config)
     - [ ] keep SFX in outputs
-
+  - [ ] FIX: FnOp.op_needs & FnOp.op_provides not respected during pruning.
+  - [ ] ENH: virtual graph roots for inputs & outputs, for visiting algos (eg prune by outs)
+  - [ ] REFACT: separate op-decorator from factory (to facilitate defining conveyor operations).
+  - [ ] ENH: varargs for Outs collect all outs ate the very end
+  - [ ] ENH: varargs for Outs collect all outs ate the very end
+  - [ ] ENH: use Signature.Param from `inspect` module to match needs & zip provides
+  - [ ] REFACT: network.py --> compilation.py
+  - [ ] FEAT: +1 merge method for pipelines: nest=False: treat Pipelines as Operations
   - plot:
 
     - [+] plot red partial outs/failures
@@ -62,17 +68,20 @@ Graphtik Changelog
     - [ ] Badges on Data
     - [ ] update legend (or generate it dynamically)
     - [ ] sphinxext: extend standard `doctest` module (instead of sphinx-builder)
-    - [ ] sphinx: autodoc Pipelines & Ops
+    - [ ] SPHINXEXT: autodoc Pipelines & Ops
 
   - doc:
 
     - [+] explain rescheduled & endured in tutorial.
     - [+] aliases in tutorial & terms
+    - [+] add a list of Features in quick-start section
+    - [ ] Merge tutorial (operations + composition)
 
   - Dropped:
 
     - [-] Solution-retriever modifier;
       DROPPED: easier and more generic to access solution from Op-context.
+      REINSTATED to support simple conveyor belts from json-pointer paths.
     - [-] `solution.executed` pre-populated with all operations
     - [-] parallel batches restart from last position in steps
     - [-] covert custom op classes & modifiers directly into mergeable networkx graphs;
@@ -88,6 +97,15 @@ https://github.com/pygraphkit/graphtik/releases
 
 Changelog
 %%%%%%%%%
+
+
+v8.5.0 (16 May 2020, @ankostis): JSONP; accessor modifier, settled name for  keyword modifier
+=============================================================================================
++ FEAT(modifier): Dependencies with :term:`json pointer path` that can read/write
+  nested dicts & pandas.
++ FEAT(modifier, solution): +modifier with accessor functions to read/write Solution.
++ break/REFACT(modifier): ``fn_kwarg-->keyword``
++ FEAT(op): default :func:`.identity_function()` acting as :term:`conveyor operation`.
 
 
 v8.4.0 (15 May 2020, @ankostis): subclass-able Op, plot edges from south-->north of nodes
