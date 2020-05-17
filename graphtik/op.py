@@ -273,7 +273,7 @@ class FunctionalOperation(Operation):
         node_props = node_props = node_props if node_props else {}
 
         if fn and not callable(fn):
-            raise TypeError(f"Operation was not provided with a callable: {fn}")
+            raise TypeError(f"Operation was provided with a non-callable: {fn}")
         if node_props is not None and not isinstance(node_props, cabc.Mapping):
             raise TypeError(
                 f"Operation `node_props` must be a dict, was {type(node_props).__name__!r}: {node_props}"
