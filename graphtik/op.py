@@ -650,7 +650,7 @@ class FunctionalOperation(Operation):
         """Zip results with expected "real" (without sideffects) `provides`."""
         from .config import is_reschedule_operations
 
-        fn_expected: iset = self._fn_provides
+        fn_expected = self._fn_provides
         rescheduled = first_solid(is_reschedule_operations(), self.rescheduled)
         if self.returns_dict:
 
@@ -666,12 +666,10 @@ class FunctionalOperation(Operation):
                     f"got {type(results).__name__!r}: {results}\n  {self}"
                 )
 
+            fn_required = fn_expected
             if rescheduled:
-                fn_required = fn_expected
                 # Canceled sfx are welcomed.
                 fn_expected = iset(self.provides)
-            else:
-                fn_required = fn_expected
 
             res_names = results.keys()
 
