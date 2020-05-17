@@ -409,7 +409,16 @@ Architecture
         Getter/setter functions to extract/populate `solution` values given as a `modifier` parameter
         (not applicable for pure `sideffects`).
 
-        See :class:`.Accessor` defining class and the :func:`.json_pointer` concrete factory.
+        See :class:`.Accessor` defining class and the :func:`.jsonp` concrete factory.
+
+    json pointer path
+    jsonp
+        A `modifier` on a dependency starting with a slash(``/``) is `accessing <accessor>`
+        the `solution` as a `json pointer <https://tools.ietf.org/html/rfc6901>`_
+        like ``/dep/inner/attr_or_item_or/1/based``.
+
+        The first step is the name of a `dependency` in the `graph` which becomes
+        the root document of the *jsonp* expression following.
 
     reschedule
     rescheduling

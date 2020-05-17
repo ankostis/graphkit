@@ -14,7 +14,7 @@ from itertools import cycle
 from multiprocessing import Pool, cpu_count
 from multiprocessing import dummy as mp_dummy
 from multiprocessing import get_context
-from operator import add, floordiv, mul, sub, getitem, setitem
+from operator import add, floordiv, getitem, mul, setitem, sub
 from pprint import pprint
 from textwrap import dedent
 from time import sleep
@@ -23,7 +23,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from graphtik import network
+from graphtik import (
+    NO_RESULT,
+    NO_RESULT_BUT_SFX,
+    NULL_OP,
+    accessor,
+    compose,
+    jsonp,
+    network,
+    operation,
+    optional,
+    sfx,
+    sfxed,
+    vararg,
+)
 from graphtik.base import AbortedException, IncompleteExecutionError, Operation
 from graphtik.config import (
     abort_run,
@@ -37,9 +50,8 @@ from graphtik.config import (
     tasks_marshalled,
 )
 from graphtik.execution import Solution, _OpTask, task_context
-from graphtik.modifiers import accessor, dep_renamed, optional, sfx, sfxed, vararg
-from graphtik.op import NO_RESULT, NO_RESULT_BUT_SFX, operation
-from graphtik.pipeline import NULL_OP, Pipeline, compose
+from graphtik.modifiers import dep_renamed
+from graphtik.pipeline import Pipeline
 
 log = logging.getLogger(__name__)
 
@@ -1067,6 +1079,21 @@ def test_solution_accessor_simple():
     copy_values.plot("t.pdf")
     sol = copy_values.compute({"a": 1, "b": 2})
     assert sol == {"a": 1, "b": 2, "A": 1, "BB": 2}
+
+
+def test_jsonp_and_conveyor_fn():
+    copy_values = operation(
+        name="copy values in solution: a+b-->A+BB",
+        needs=[jsonp("/inputs/a"), jsonp("/inputs/b")],
+        provides=[jsonp("/RESULTS/A"), jsonp("/RESULTS/BB")],
+    )()
+
+    results = copy_values.compute({"inputs": {"a": 1, "b": 2}})
+    assert results == {"RESULTS": {"A": 1, "BB": 2}}
+
+    pipe = compose("t", copy_values)
+    sol = pipe.compute({"inputs": {"a": 1, "b": 2}}, outputs="RESULTS")
+    assert sol == {"RESULTS": {"A": 1, "BB": 2}}
 
 
 # Function without return value.

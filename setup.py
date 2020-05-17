@@ -48,6 +48,7 @@ test_deps = list(
             "sphinxcontrib-spelling",
             "html5lib",  # for sphinxext TCs
             "readme-renderer",  # for PyPi landing-page
+            "pandas",
         ]
     )
 )

@@ -79,14 +79,15 @@ When true, increase details on string-representation of network objects and erro
 
 :param enabled:
     - ``None, False, string(0, false, off, no)``: Disabled
-    - ``1``: Enable ALL ``DEBUG_XXX``
-    - integers: Enable respective ``DEBUG_XXX`` bit-field constants
+    - TODO: ``1``: Enable ALL ``DEBUG_XXX``
+    - TODO: integers: Enable respective ``DEBUG_XXX`` bit-field constants
     - anything else: Enable ALL ``DEBUG_XXX``
 
 Affected behavior:
 
 .. debug-behavior-start
 
++ :meth:`FunctionalOperation.compute()` raise any matching-needs errors immediately;
 + net objects print details recursively;
 + plotted SVG diagrams include style-provenance as tooltips;
 + Sphinx extension also saves the original DOT file next to each image

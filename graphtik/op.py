@@ -633,6 +633,10 @@ class FunctionalOperation(Operation):
                     positional.append(inp_value)
 
             except Exception as nex:
+                from .config import is_debug
+
+                if is_debug():
+                    raise
                 log.debug(
                     "Cannot prepare op(%s) need(%s) due to: %s",
                     self.name,
