@@ -117,6 +117,9 @@ class _Modifier(str):
     - and only *rarely* (and with care) call its :meth:`_withset()` method or
       :func:`_modifier()` factor functions.
 
+    :param kw:
+        any extra attributes
+
     .. Note::
         Factory function:func:`_modifier()` may return a plain string, if no other
         arg but ``name`` is given.
@@ -158,6 +161,7 @@ class _Modifier(str):
         accessor,
         sideffected,
         sfx_list,
+        **kw,
     ) -> "_Modifier":
         """Warning, returns None! """
         ## sanity checks & preprocessing
@@ -202,7 +206,7 @@ class _Modifier(str):
             obj.sideffected = sideffected
         if sfx_list:
             obj.sfx_list = sfx_list
-
+        vars(obj).update(kw)
         return obj
 
     def __repr__(self):
