@@ -130,6 +130,15 @@ class ResolveError(KeyError):
         return self.args[2]
 
 
+def _log_overwrite(part, doc, child):
+    log.warning(
+        "Overwritting json-pointer part %r in a %i-len subdoc over scalar %r.",
+        part,
+        len(doc),
+        child,
+    )
+
+
 def resolve_path(
     doc: Union[Sequence, Mapping],
     path: Union[str, Iterable[str]],
@@ -294,12 +303,7 @@ def list_scouter(doc, part, container_factory, overwrite):
             # Out of bounds, but ok for now, will break also on assignment, below.
             pass
         else:
-            log.warning(
-                "Overwritting json-pointer part %r in a %i-len subdoc over scalar %r.",
-                part,
-                len(doc),
-                child,
-            )
+            _log_overwrite(part, doc, child)
     elif not overwrite:
         try:
             child = doc[part]
@@ -317,12 +321,7 @@ def list_scouter(doc, part, container_factory, overwrite):
 def collection_scouter(doc, part, container_factory, overwrite):
     """Get item `part` from `doc` collection, or create a new ome from `container_factory`."""
     if overwrite and log.isEnabledFor(logging.WARNING) and part in doc:
-        log.warning(
-            "Overwritting json-pointer part %r in a %i-len subdoc over scalar %r.",
-            part,
-            len(doc),
-            doc[part],
-        )
+        _log_overwrite(part, doc, doc[part])
     elif not overwrite:
         try:
             child = doc[part]
@@ -340,12 +339,7 @@ def collection_scouter(doc, part, container_factory, overwrite):
 def object_scouter(doc, part, value, container_factory, overwrite):
     """Get attribute `part` in `doc` object, or create a new one from `container_factory`."""
     if overwrite and log.isEnabledFor(logging.WARNING) and hasattr(doc, part):
-        log.warning(
-            "Overwritting json-pointer part %r in a %i-len subdoc over scalar %r.",
-            part,
-            len(doc),
-            getattr(doc, part),
-        )
+        _log_overwrite(part, doc, getattr(doc, part))
     elif not overwrite:
         try:
             child = getattr(doc, part)
@@ -453,6 +447,47 @@ def set_path_value(
             )
 
 
+def _update_paths(
+    doc,
+    paths_vals: Collection[Tuple[List[str], Any]],
+    container_factory=dict,
+    root=UNSET,
+    descend_objects=None,
+) -> None:
+    # The `group` is a list of paths with common prefix (root)
+    # currently being built.
+    group_prefix, group = None, ()
+    for p, v in paths_vals + [((...,), ...)]:
+        assert len(p) >= 1 or v is ..., locals()
+
+        next_prefix = p[0]
+        if next_prefix != group_prefix:
+            if len(p) == 1 and v is not ...:
+                # Assign value and proceed to the next one,
+                # THOUGH if a deeper path with this same prefix follows,
+                # it will overwrite the value just written.
+                doc[next_prefix] = v
+            else:
+                if group_prefix:  # Is it past the 1st loop?
+                    ## Recurse into sub-group.
+                    #
+                    child = None
+                    if group_prefix in doc:
+                        child = doc[group_prefix]
+                        if not is_collection(child):
+                            child = None
+                            _log_overwrite(group_prefix, doc, child)
+
+                    if not child:
+                        child = doc[group_prefix] = container_factory()
+                    _update_paths(child, [(p[1:], v) for p, v in group])
+
+                group_prefix, group = (next_prefix, [(p, v)])  # prepare the next group
+        else:
+            assert len(p) > 1, locals()  # shortest path switches group.
+            group.append((p, v))
+
+
 def update_paths(
     doc,
     paths_vals: Collection[Tuple[List[str], Any]],
@@ -469,50 +504,6 @@ def update_paths(
         descend_objects,
     )
 
-
-def _update_paths(
-    doc,
-    paths_vals: Collection[Tuple[List[str], Any]],
-    container_factory=dict,
-    root=UNSET,
-    descend_objects=None,
-) -> None:
-    # The `group` is a list of paths with common prefix (root)
-    # currently being built.
-    group_prefix, group = None, ()
-    for p, v in paths_vals + [((...,), ...)]:
-        assert len(p) >= 1 or v is ..., locals()
-
-        next_prefix = p[0]
-        if next_prefix != group_prefix:
-            if group_prefix:  # Is it past the 1st loop?
-                ## Recurse into sub-group.
-                #
-                child = None
-                if group_prefix in doc:
-                    child = doc[group_prefix]
-                    if not is_collection(child):
-                        log.warning(
-                            "Overwritting json-pointer part %r in a %i-len subdoc over scalar %r.",
-                            group_prefix,
-                            len(doc),
-                            child,
-                        )
-                        child = None
-                if not child:
-                    child = doc[group_prefix] = container_factory()
-                _update_paths(child, [(p[1:], v) for p, v in group])
-
-            if len(p) == 1 and v is not ...:
-                # Assign value and proceed to the next one,
-                # THOUGH there should not follow a deeper path with this same prefix
-                # or it will overwrite it value just written.
-                doc[next_prefix] = v
-            else:
-                group_prefix, group = (next_prefix, [(p, v)])  # prepare the next group
-        else:
-            assert len(p) > 1, locals()
-            group.append((p, v))
 
 
 def list_popper(doc: Sequence, part, do_pop):
