@@ -583,43 +583,6 @@ def test_op_rename():
     )
 
 
-@pytest.mark.xfail(
-    reason="Impl rename json-parts not finished, bc will be reverted soon"
-)
-def test_op_rename_parts():
-    op = operation(
-        str,
-        name="op1",
-        needs=[sfx("a/b"), "/a/b"],
-        provides=["b/c", sfxed("d/e/f", "k/l")],
-        aliases=[("b/c", "/b/t")],
-    )
-
-    def renamer(na):
-        if na.typ.endswith(".jsonpart"):
-            return f"PP.{na.name}"
-
-    ren = op.withset(renamer=renamer)
-    got = str(ren)
-    print(got)
-    assert got == (
-        r"[\n ]+",  # collapse all space-chars into a single space
-        " ",
-        """
-        # GETTING:
-        # FunctionalOperation(name='op1',
-        #     needs=[sfx('a/b'), 'PP./a/b/PP./a/b/PP./a/b'($)],
-        #     provides=['PP.b/c/PP.b/c'($), 'PP.sfxed('d/e/f', 'k/l')/PP.sfxed('d/e/f', 'k/l')/PP.sfxed('d/e/f', 'k/l')'($)],
-        #     aliases=[('PP.b/c/PP.b/c', '/b/t')], fn='str')
-        # SHOULD GET:
-        FunctionalOperation(name='op1',
-            needs=[sfx('a/b'), '/a/b'],
-            provides=['a', sfxed('PP.d/PP.e/PP.f', 'k/l')],
-            aliases=[('PP.b/PP.c', '/PP.b/PP.t')], fn='str')
-        """.strip(),
-    )
-
-
 def test_pipe_rename():
     pipe = compose(
         "t",

@@ -432,7 +432,7 @@ class Pipeline(Operation):
 
 
 def nest_any_node(ren_args: RenArgs) -> str:
-    """Nest both operation & data under `parent`'s name (if given) but NOT jsonparts.
+    """Nest both operation & data under `parent`'s name (if given).
 
     :return:
         the nested name of the operation or data
@@ -441,8 +441,7 @@ def nest_any_node(ren_args: RenArgs) -> str:
     def prefixed(name):
         return f"{ren_args.parent.name}.{name}" if ren_args.parent else name
 
-    if not ren_args.typ.endswith(".jsonpart"):
-        return dep_renamed(ren_args.name, prefixed)
+    return dep_renamed(ren_args.name, prefixed)
 
 
 def compose(
@@ -505,8 +504,7 @@ def compose(
 
           .. Attention::
               The callable SHOULD wish to preserve any :term:`modifier` on dependencies,
-              and use :func:`.dep_renamed()` for :attr:`.RenArgs.typ` not ending
-              in ``.jsonpart``.
+              and use :func:`.dep_renamed()`.
 
         - If false (default), applies :term:`operation merging`, not *nesting*.
 

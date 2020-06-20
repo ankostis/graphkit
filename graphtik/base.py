@@ -830,17 +830,7 @@ class RenArgs(NamedTuple):
     """
 
     #: what is currently being renamed,
-    #: one of the string::
-    #:
-    #:     op
-    #:     need.jsonpart
-    #:     need
-    #:     provide.jsonpart
-    #:     provide
-    #:     alias.jsonpart
-    #:     alias
-    #:
-    #: Any :term:`jsonp` parts are renamed prior to the full path (as ordered above).
+    #: one of the string: ``(op | need | provide | alias)``
     typ: str
     #: the operation currently being processed
     op: "Operation"
@@ -938,16 +928,6 @@ class Operation(Plottable, abc.ABC):
 
             return new_name
 
-        def rename_subdocs(ren_args):
-            parts = getattr(ren_args.name, "jsonp", None)
-            if parts:  # assuming deps here have been jsonpized earlier.
-                path = "/".join(
-                    rename_driver(ren_args._replace(typ=ren_args.typ + ".jsonpart"))
-                    for p in parts
-                )
-                ren_args = ren_args._replace(name=path)
-            return rename_driver(ren_args)
-
         ren_args = RenArgs(None, self, None)
 
         kw["name"] = with_errors_logged(
@@ -955,13 +935,13 @@ class Operation(Plottable, abc.ABC):
         )
         ren_args = ren_args._replace(typ="need")
         kw["needs"] = [
-            with_errors_logged(rename_subdocs, ren_args._replace(name=n))
+            with_errors_logged(rename_driver, ren_args._replace(name=n))
             for n in kw.get("needs", self.needs)
         ]
         ren_args = ren_args._replace(typ="provide")
         # Store renamed `provides` as map, used for `aliases` below.
         renamed_provides = {
-            n: with_errors_logged(rename_subdocs, ren_args._replace(name=n))
+            n: with_errors_logged(rename_driver, ren_args._replace(name=n))
             for n in kw.get("provides", self.provides)
         }
         kw["provides"] = list(renamed_provides.values())
@@ -970,7 +950,7 @@ class Operation(Plottable, abc.ABC):
             kw["aliases"] = [
                 (
                     renamed_provides[k],
-                    with_errors_logged(rename_subdocs, ren_args._replace(name=v)),
+                    with_errors_logged(rename_driver, ren_args._replace(name=v)),
                 )
                 for k, v in kw.get("aliases", self.aliases)  # pylint: disable=no-member
             ]

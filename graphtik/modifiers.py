@@ -1106,7 +1106,7 @@ def dependency(dep) -> str:
 
 def dep_renamed(dep, ren) -> Union[_Modifier, str]:
     """
-    Renames `dep` as `ren` or call `ren`` (if callable) to decide its name,
+    Renames `dep` as `ren` or call `ren` (if callable) to decide its name,
 
     preserving any :func:`keyword` to old-name.
 

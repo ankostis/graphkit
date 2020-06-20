@@ -1262,8 +1262,6 @@ def test_network_nest_subdocs(quarantine_pipeline):
         dep = ra.name
         if ra.typ == "op":
             return True
-        if ra.typ.endswith(".jsonpart"):
-            return False
         if dep == "tasks":
             return True
         # if is_sfxed(dep):
