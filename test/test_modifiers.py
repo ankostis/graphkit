@@ -44,8 +44,8 @@ def test_serialize_modifier(ser_method):
         (lambda: varargs("d"), "d"),
         (lambda: jsonp("/d"), "/d"),
         (lambda: jsonp("/d/"), "/d/"),
-        (lambda: jsonp("/d", no_jsonp=True), "/d"),
-        (lambda: jsonp("/d/", no_jsonp=True), "/d/"),
+        (lambda: jsonp("/d", jsonp=False), "/d"),
+        (lambda: jsonp("/d/", jsonp=False), "/d/"),
         (lambda: sfx("e"), "sfx('e')"),
         (lambda: sfx("e", optional=1), "sfx('e')"),
         (lambda: sfxed("f", "a", "b"), "sfxed('f', 'a', 'b')"),
@@ -90,8 +90,8 @@ def test_modifs_str(mod, exp):
         (lambda: jsonp("d"), "'d'"),
         (lambda: jsonp("/d"), "'/d'($)"),
         (lambda: jsonp("/d/"), "'/d/'($)"),
-        (lambda: jsonp("/d", no_jsonp=True), "'/d'"),
-        (lambda: jsonp("/d/", no_jsonp=True), "'/d/'"),
+        (lambda: jsonp("/d", jsonp=False), "'/d'"),
+        (lambda: jsonp("/d/", jsonp=()), "'/d/'"),
         (lambda: sfx("e"), "sfx('e')"),
         (lambda: sfx("e", optional=1), "sfx('e'(?))"),
         (lambda: sfxed("f", "a", "b"), "sfxed('f', 'a', 'b')"),
@@ -99,7 +99,7 @@ def test_modifs_str(mod, exp):
         (lambda: sfxed("f", "ff", optional=1, keyword="F"), "sfxed('f'(?'F'), 'ff')",),
         (lambda: sfxed("f", "ff/", optional=1), "sfxed('f'(?), 'ff/')"),
         (lambda: sfxed("f/", "ff", optional=1), "sfxed('f/'($?), 'ff')"),
-        (lambda: sfxed("/f", "ff", optional=1, no_jsonp=1), "sfxed('/f'(?), 'ff')"),
+        (lambda: sfxed("/f", "ff", optional=1, jsonp=0), "sfxed('/f'(?), 'ff')"),
         (lambda: sfxed_vararg("f", "a"), "sfxed('f'(*), 'a')"),
         (lambda: sfxed_varargs("f", "a", "b"), "sfxed('f'(+), 'a', 'b')"),
         # Accessor
@@ -252,8 +252,10 @@ def test_modifs_rename_fn(mod, exp, ser_method):
         # Check not just(!) `_repr` has changed.
         assert got.sideffected != dep.sideffected
 
-    if hasattr(dep, "jsonp"):
-        assert got.jsonp == jsonp_path(str(dep_stripped(got)))
+    if getattr(dep, "jsonp", None):
+        assert got.jsonp != dep.jsonp
+        assert got.jsonp == jsonp_path(got)
+        assert got.jsonp == jsonp_path(str(got))
 
 
 @pytest.mark.parametrize(

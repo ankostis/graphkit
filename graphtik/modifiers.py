@@ -47,7 +47,7 @@ from typing import (
 #: Arguments-presence patterns for :class:`_Modifier` constructor.
 #: Combinations missing raise errors.
 _modifier_cstor_matrix = {
-# (7, kw, opt, acs, sfxed, sfx): (STR, REPR, FUNC) OR None
+# (7, kw, opt, accessors, sfxed, sfx): (STR, REPR, FUNC) OR None
 700000: None,
 710000: (       "%(dep)s",                  "'%(dep)s'(%(acs)s>%(kw)s)",    "keyword"),
 711000: (       "%(dep)s",                  "'%(dep)s'(%(acs)s?%(kw)s)",    "optional"),
@@ -282,7 +282,7 @@ def _modifier(
     accessor=None,
     sideffected=None,
     sfx_list=(),
-    no_jsonp=None,
+    jsonp=None,
     **kw,
 ) -> Union[str, _Modifier]:
     """
@@ -291,19 +291,26 @@ def _modifier(
     It decides the final `name` and `_repr` for the new modifier by matching
     the given inputs with the :data:`_modifier_cstor_matrix`.
 
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the :term:`jsonp`
+        dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
     :param kw:
         Not used here, any given kKVs are assigned as :class:`_Modifier` attributes,
         for client code to extend its own modifiers.
     """
+    if jsonp:
+        kw["jsonp"] = jsonp  # WARN: must be a collection for jsonp-accessors!
     # Prevent sfx-jsonp.
-    if "/" in name and not no_jsonp and (sideffected is None or sfx_list):
+    elif "/" in name and jsonp is None and (sideffected is None or sfx_list):
         from .jsonpointer import jsonp_path
 
         kw["jsonp"] = jsonp_path(name)
-        # Don't override user's accessor.
-        #
-        if not accessor:
-            accessor = JsonpAccessor()
+    # Don't override user's accessor.
+    #
+    if "jsonp" in kw and not accessor:
+        accessor = JsonpAccessor()
 
     args = (name, keyword, optional, accessor, sideffected, sfx_list)
     formats = _match_modifier_args(*args)
@@ -342,14 +349,13 @@ def modifier_withset(
     """
     if isinstance(dep, _Modifier):
         kw = {
-            **vars(dep),
             **{
                 k: v
-                for k, v in locals().items()
-                if v is not ...
-                # Filter out CACHED path-parts, to regenerate.
-                and k != "jsonp"
+                for k, v in vars(dep).items()
+                # Regenerate cached, truthy-only, jsnop-parts.
+                if k != "jsonp" or not v
             },
+            **{k: v for k, v in locals().items() if v is not ...},
             **kw,
         }
         kw = {
@@ -366,7 +372,7 @@ def modifier_withset(
 
 
 def keyword(
-    name: str, keyword: str = None, accessor: Accessor = None, no_jsonp=None
+    name: str, keyword: str = None, accessor: Accessor = None, jsonp=None
 ) -> _Modifier:
     """
     Annotate a :term:`needs` that (optionally) maps `inputs` name --> *keyword* argument name.
@@ -388,9 +394,16 @@ def keyword(
     :param accessor:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
 
     :return:
         a :class:`_Modifier` instance, even if no `keyword` is given OR
@@ -424,13 +437,11 @@ def keyword(
         .. graphtik::
     """
     # Must pass a truthy `keyword` bc cstor cannot not know its keyword.
-    return _modifier(
-        name, keyword=keyword or name, accessor=accessor, no_jsonp=no_jsonp
-    )
+    return _modifier(name, keyword=keyword or name, accessor=accessor, jsonp=jsonp)
 
 
 def optional(
-    name: str, keyword: str = None, accessor: Accessor = None, no_jsonp=None
+    name: str, keyword: str = None, accessor: Accessor = None, jsonp=None
 ) -> _Modifier:
     """
     Annotate :term:`optionals` `needs` corresponding to *defaulted* op-function arguments, ...
@@ -448,9 +459,16 @@ def optional(
     :param accessor:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
 
     **Example:**
 
@@ -497,36 +515,52 @@ def optional(
         keyword=keyword or name,
         optional=_Optionals.keyword,
         accessor=accessor,
-        no_jsonp=no_jsonp,
+        jsonp=jsonp,
     )
 
 
-def accessor(name: str, accessor: Accessor = None, no_jsonp=None) -> _Modifier:
+def accessor(name: str, accessor: Accessor = None, jsonp=None) -> _Modifier:
     """
     Annotate a `dependency` with :term:`accessor` functions to read/write `solution`.
 
     :param accessor:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
+
 
     - Probably not very usefull -- see the :func:`jsonp` modifier for an integrated
       use case.
     - To combine it with `optional`, `keyword`, etc use the rest modifier factories
       and pass an argument value to their `accessor` parameter.
     """
-    return _modifier(name, accessor=accessor, no_jsonp=no_jsonp)
+    return _modifier(name, accessor=accessor, jsonp=jsonp)
 
 
-def jsonp(name: str, no_jsonp=None) -> _Modifier:
+def jsonp(name: str, jsonp=None) -> _Modifier:
     """
-    Block a dependency starting with slash(``/``) to be  taken as :term:`json pointer path`.
+    Control the automatic interpretation of dependencies containing slashes into :term:`json pointer path`.
 
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
+
 
     **Example:**
 
@@ -583,19 +617,27 @@ def jsonp(name: str, no_jsonp=None) -> _Modifier:
 
     .. graphtik::
     """
-    return _modifier(name, no_jsonp=no_jsonp)
+    return _modifier(name, jsonp=jsonp)
 
 
-def vararg(name: str, accessor: Accessor = None, no_jsonp=None) -> _Modifier:
+def vararg(name: str, accessor: Accessor = None, jsonp=None) -> _Modifier:
     """
     Annotate a :term:`varargish` `needs` to  be fed as function's ``*args``.
 
     :param accessor:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
+
 
     .. seealso::
         Consult also the example test-case in: :file:`test/test_op.py:test_varargs()`,
@@ -634,21 +676,27 @@ def vararg(name: str, accessor: Accessor = None, no_jsonp=None) -> _Modifier:
         {'a': 5, 'sum': 5}
 
     """
-    return _modifier(
-        name, optional=_Optionals.vararg, accessor=accessor, no_jsonp=no_jsonp
-    )
+    return _modifier(name, optional=_Optionals.vararg, accessor=accessor, jsonp=jsonp)
 
 
-def varargs(name: str, accessor: Accessor = None, no_jsonp=None) -> _Modifier:
+def varargs(name: str, accessor: Accessor = None, jsonp=None) -> _Modifier:
     """
     An :term:`varargish`  :func:`.vararg`, naming a *iterable* value in the inputs.
 
     :param accessor:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
+
 
     .. seealso::
         Consult also the example test-case in: :file:`test/test_op.py:test_varargs()`,
@@ -707,9 +755,7 @@ def varargs(name: str, accessor: Accessor = None, no_jsonp=None) -> _Modifier:
 
     .. varargs-mistake-end
     """
-    return _modifier(
-        name, optional=_Optionals.varargs, accessor=accessor, no_jsonp=no_jsonp
-    )
+    return _modifier(name, optional=_Optionals.varargs, accessor=accessor, jsonp=jsonp)
 
 
 def sfx(name, optional: bool = None) -> _Modifier:
@@ -796,7 +842,7 @@ def sfxed(
     keyword: str = None,
     optional: bool = None,
     accessor: Accessor = None,
-    no_jsonp=None,
+    jsonp=None,
 ) -> _Modifier:
     r"""
     Annotates a :term:`sideffected` dependency in the solution sustaining side-effects.
@@ -809,9 +855,17 @@ def sfxed(
     :param accessor:
         the functions to access values to/from solution (see :class:`Accessor`)
         (actually a 2-tuple with functions is ok)
-    :param no_jsonp:
-        An annotated dependency with a name containing slashes(``/``) it is assumed
-        as :term:`json pointer path` unless this is true.
+    :param jsonp:
+        If given, it may be the pre-splitted *parts* of the json pointer path
+        for the dependency -- in that case, the dependency name is irrelevant -- or
+        a falsy (but not ``None``) value, to disable the automatic interpeting of
+        the dependency name as a json pointer path, regardless of any containing slashes.
+
+        .. Tip::
+            If accessing pandas, you may pass an already splitted path with
+            its last *part* being a `callable indexer
+            <https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable>`_.
+
 
     Like :func:`.sfx` but annotating a *real* :term:`dependency` in the solution,
     allowing that dependency to be present both in :term:`needs` and :term:`provides`
@@ -901,12 +955,12 @@ def sfxed(
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
         accessor=accessor,
-        no_jsonp=no_jsonp,
+        jsonp=jsonp,
     )
 
 
 def sfxed_vararg(
-    dependency: str, sfx0: str, *sfx_list: str, accessor: Accessor = None, no_jsonp=None
+    dependency: str, sfx0: str, *sfx_list: str, accessor: Accessor = None, jsonp=None
 ) -> _Modifier:
     """Like :func:`sideffected` + :func:`vararg`. """
     return _modifier(
@@ -915,12 +969,12 @@ def sfxed_vararg(
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
         accessor=accessor,
-        no_jsonp=no_jsonp,
+        jsonp=jsonp,
     )
 
 
 def sfxed_varargs(
-    dependency: str, sfx0: str, *sfx_list: str, accessor: Accessor = None, no_jsonp=None
+    dependency: str, sfx0: str, *sfx_list: str, accessor: Accessor = None, jsonp=None
 ) -> _Modifier:
     """Like :func:`sideffected` + :func:`varargs`. """
     return _modifier(
@@ -929,7 +983,7 @@ def sfxed_varargs(
         sideffected=dependency,
         sfx_list=(sfx0, *sfx_list),
         accessor=accessor,
-        no_jsonp=no_jsonp,
+        jsonp=jsonp,
     )
 
 

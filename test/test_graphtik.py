@@ -1186,7 +1186,7 @@ def test_jsonp_disabled():
     no_jsonp = operation(
         name="copy a+b-->A+BB",
         needs=[jsonp("inputs/a", 1), jsonp("inputs/b", 1)],
-        provides=[jsonp("RESULTS/A", True), jsonp("RESULTS/BB", no_jsonp=True)],
+        provides=[jsonp("RESULTS/A", True), jsonp("RESULTS/BB", jsonp=False)],
     )()
     with pytest.raises(MultiValueError):
         no_jsonp.compute({"inputs": {"a": 1, "b": 2}})
@@ -1222,7 +1222,7 @@ def test_jsonp_and_conveyor_fn_complex():
         operation(
             name="op1",
             needs=["i/a", "i/a"],  # dupe jsonp needs
-            provides=["r/a", jsonp("a", True)],
+            provides=["r/a", jsonp("a")],
         )(),
         operation(
             lambda x: (x, 2 * x), name="op2", needs=["r/a"], provides=["r/A", "r/AA"],
