@@ -1110,12 +1110,19 @@ def dep_renamed(dep, ren) -> Union[_Modifier, str]:
 
     preserving any :func:`keyword` to old-name.
 
+    If it's a :term:`jsonp` and `ren` is callable, it is invoked once for each part
+    and then once more for the whole dep.
+
     For :term:`sideffected` it renames the dependency (not the *sfx-list*) --
     you have to do it that manually with a custom renamer-function, if ever
     the need arise.
     """
     if callable(ren):
-        renamer = ren
+        jsonp = get_jsonp(dep)
+        if jsonp:
+            renamer = "/".join(map(ren, jsonp))
+        else:
+            renamer = ren
     else:
         renamer = lambda n: ren
 
