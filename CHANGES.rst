@@ -107,8 +107,8 @@ Changelog
 %%%%%%%%%
 
 
-v9.0.0.dev0 (25 May 2020, @ankostis): JSONP+Accessors modifier, settled name for keyword modifier
-=================================================================================================
+v9.0.0.dev1 (21 Jun 2020, @ankostis): JSONP+Accessors
+=====================================================
 + FEAT(modifier): Dependencies with :term:`json pointer path` that can read/write
   :term:`subdoc`\s (e.g. nested dicts & pandas).
 + FEAT(modifier, solution): +modifier with accessor functions to read/write Solution.
@@ -117,6 +117,17 @@ v9.0.0.dev0 (25 May 2020, @ankostis): JSONP+Accessors modifier, settled name for
 + FIX(NET, EXECUTION): discovered and fixed bugs in pruning, evictions and rescheduling
   with overwrites, while testing new `jsonp` modifier;  rely on dag alone while pruning
   (and not digging into op needs/provides).
+
+  - Dupe Evictions of pruned output were deliberately & wrongly consolidated, while
+    it is possible to need to evict repeatedly the same out from multiple ops
+    providing it.
+  - Less aggressive prune-isolated-data permits SFX not to be asked explicitly,
+    and behave more like regular data.
+    Now For certain cases, the more specific error "Unreachable out" gets raised,
+    instead of the too generic "Unsolvable graph".
+  - Prune-by-outputs was ignoring given inputs, chocking on computation cycles
+    that were possible to avoid!
+
 + DROP(net): ``_EvictionInstruction`` class was obscuring modifier combinations, and
   it didn't make sense any more, being the only instruction.
 + FEAT(ops, pipelines, net, sol): unified :meth:`.Plottable.ops` utility properties.
@@ -128,6 +139,11 @@ v9.0.0.dev0 (25 May 2020, @ankostis): JSONP+Accessors modifier, settled name for
       :end-before: .. dep-attributes-end
 
 + enh(op): with DEBUG errors during inputs/needs matching are raised immediately.
++ enh(op, pipe): restrict operation names to be strings (were :class:`collection.abc.Hashable`).
++ feat(modifier): public-ize :func:`modifier_withset()` to produce modified
+  clones -- handle it with care.
++ fix(travis): update `pytest` or else `pip-install chokes with
+  <https://travis-ci.org/github/ankostis/graphkit/jobs/700326904>`_ `pytest-coverage` plugin.
 
 
 v8.4.0 (15 May 2020, @ankostis): subclass-able Op, plot edges from south-->north of nodes
