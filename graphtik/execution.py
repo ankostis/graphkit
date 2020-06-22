@@ -756,6 +756,7 @@ class ExecutionPlan(
         """
         try:
             self.validate(named_inputs, outputs)
+            dag = self.dag  # locals opt
 
             ## Choose a method of execution
             #
@@ -779,7 +780,7 @@ class ExecutionPlan(
 
             solution = solution_class(
                 self,
-                {k: v for k, v in named_inputs.items() if k in self.dag.nodes}
+                {k: v for k, v in named_inputs.items() if k in dag.nodes}
                 if evict
                 else named_inputs,
             )
@@ -816,7 +817,7 @@ class ExecutionPlan(
             if evict:
                 expected_provides = set()
                 expected_provides.update(
-                    yield_chaindocs(self.dag, self.provides, expected_provides,)
+                    yield_chaindocs(dag, self.provides, expected_provides,)
                 )
                 expected_provides = set(dep_stripped(n) for n in expected_provides)
                 # It is a proper subset when not all outputs calculated.
