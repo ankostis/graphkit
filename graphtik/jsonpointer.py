@@ -633,3 +633,7 @@ def pop_path(
             return default
 
     return doc
+
+def expand_jsonp_pairs(d: dict):
+    d = {jsonp_ize(k): v for k, v in named_inputs.items()}
+    return d

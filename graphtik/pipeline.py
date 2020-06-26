@@ -16,8 +16,19 @@ from typing import Callable, List, Mapping, Union
 
 from boltons.setutils import IndexedSet as iset
 
-from .base import UNSET, Items, Operation, PlotArgs, Plottable, RenArgs, aslist, jetsam
-from .modifiers import dep_renamed
+from .base import (
+    UNSET,
+    Items,
+    Operation,
+    PlotArgs,
+    Plottable,
+    RenArgs,
+    aslist,
+    jetsam,
+    jsonp_ize,
+)
+from .jsonpointer import expand_jsonp_pairs
+from .modifiers import dep_renamed, get_jsonp
 
 log = logging.getLogger(__name__)
 
@@ -361,7 +372,8 @@ class Pipeline(Operation):
 
         :param named_inputs:
             A mapping of names --> values that will be fed to the `needs` of all operations.
-            Cloned, not modified.
+            Cloned, not modified.  The names may be :term:`jsonp` paths, that are
+            expanded within the mapping.
         :param outputs:
             A string or a list of strings with all data asked to compute.
             If ``None``, all intermediate data will be kept.
@@ -394,10 +406,13 @@ class Pipeline(Operation):
         See also :meth:`.Operation.compute()`.
         """
         from .config import reset_abort
+        from .jsonpointer import expand_jsonp_pairs
 
         try:
             if named_inputs is UNSET:
                 named_inputs = {}
+            # else:
+            #     named_inputs = expand_jsonp_pairs(named_inputs)
 
             net = self.net  # jetsam
             outputs = self.outputs if outputs == UNSET else outputs

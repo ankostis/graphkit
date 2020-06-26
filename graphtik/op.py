@@ -51,7 +51,7 @@ from .modifiers import (
     is_sfxed,
     is_vararg,
     is_varargs,
-    modifier_withset,
+    jsonp,
     optional,
 )
 
@@ -120,7 +120,7 @@ def as_renames(i, argname):
 
 
 def jsonp_ize(dep):
-    return modifier_withset(dep) if "/" in dep and type(dep) is str else dep
+    return jsonp(dep) if "/" in dep and type(dep) is str else dep
 
 
 def jsonp_ize_all(deps):
@@ -242,6 +242,21 @@ def _spread_sideffects(
         return deps, fn_deps
     else:
         return deps, deps
+
+
+def _nested_inputs_given(self, input_values, needs):
+    jsonp_needs = [n for n in needs if get_jsonp(n)]
+    if any(jsonp_needs):
+        nested = []
+        for jsonp in jsonp_needs:
+            try:
+                resolve_path(input_values, jsonp)
+                nested.append(jsonp)
+            except ValueError:
+                pass
+        input_values = [*input_values, *nested]
+
+    return input_values
 
 
 class FunctionalOperation(Operation):
@@ -800,6 +815,8 @@ class FunctionalOperation(Operation):
         return results
 
     def compute(self, named_inputs=None, outputs: Items = None) -> dict:
+        from .jsonpointer import expand_jsonp_pairs
+
         try:
             if self.fn is None or not self.name:
                 raise ValueError(
@@ -808,6 +825,8 @@ class FunctionalOperation(Operation):
             assert self.name is not None, self
             if named_inputs is None:
                 named_inputs = {}
+            # else:
+            #     named_inputs = expand_jsonp_pairs(named_inputs)
 
             positional, varargs, kwargs = self._match_inputs_with_fn_needs(named_inputs)
             results_fn = self.fn(*positional, *varargs, **kwargs)
