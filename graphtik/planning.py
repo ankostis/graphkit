@@ -395,8 +395,9 @@ class Network(Plottable):
                 ekw["optional"] = True
             if is_sfx(n):
                 ekw["sideffect"] = nkw["sideffect"] = True
-            if get_keyword(n):
-                ekw["keyword"] = n.keyword
+            keyword = get_keyword(n)
+            if keyword:
+                ekw["keyword"] = keyword
             needs.append((n, nkw))
             needs_edges.append((n, operation, ekw))
         graph.add_nodes_from(needs)

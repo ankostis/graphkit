@@ -636,8 +636,9 @@ class FnOp(Operation):
                 else:
                     inp_value = named_inputs[n]
 
-                if get_keyword(n):
-                    kwargs[n.keyword] = inp_value
+                keyword = get_keyword(n)
+                if keyword:
+                    kwargs[keyword] = inp_value
 
                 elif is_vararg(n):
                     vararg_vals.append(inp_value)
