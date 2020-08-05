@@ -1,6 +1,6 @@
 # Copyright 2019-2020, Kostis Anagnostopoulos;
 # Licensed under the terms of the Apache License, Version 2.0. See the LICENSE file associated with the project for terms.
-""":term:`jetsam` utility for annotating exceptions from ``locals()``.
+"""Deferred logs, and :term:`jetsam` utility for annotating exceptions from ``locals()``.
 
 .. doctest::
     :hide:
@@ -11,9 +11,11 @@
     >>> __name__ = "graphtik.jetsam"
 """
 import logging
+import logging.handlers
 import sys
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Union
 
 log = logging.getLogger(__name__)
 
@@ -210,3 +212,70 @@ def save_jetsam(ex, locs, *salvage_vars: str, annotation="jetsam", **salvage_map
         log.warning(
             "Suppressed error while annotating exception: %r", ex2, exc_info=True
         )
+
+
+# Copyright: Copyright 2007-2020 by the Sphinx team.
+# Copyright 2020, Kostis Anagnostopoulos;
+# License: BSD
+#
+# Logging utilities to suppress logs when no errors occurred.
+#
+# (adapted from :mod:`sphinx.logging`)
+
+
+class MemoryHandler(logging.handlers.MemoryHandler):
+    """A memory-handler ignoring its capacity. """
+
+    def shouldFlush(self, record: logging.LogRecord):
+        """Check only if record at the flushLevel or higher (not capacity). """
+        return record.levelno >= self.flushLevel
+
+    def discard(self):
+        self.buffer.clear()
+
+
+@contextmanager
+def deferred_logging(
+    logger: logging.Logger, flush_level: Union[int, str] = logging.ERROR
+):
+    """
+    Contextmanager to suppress logs unless failures or logs above some level are issued.
+
+    :param logger:
+        what logger to intercept;  if unspecified, intercepts root-logger.
+    :param flush_level:
+        which logging-level and above (including) triggers flushing
+
+    For example::
+
+        >>> with deferred_logging(logging.getLogger()):
+        ...     pass # unstable_process()
+
+
+    ... would generate logs only if the `unstable_process` raises an exception,
+    or it issues a log at ERROR (by default) level.
+    """
+    memhandler = MemoryHandler(-1, flush_level, logger, flushOnClose=False)
+    ok = False
+
+    try:
+        handlers = []
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+            handlers.append(handler)
+
+        logger.addHandler(memhandler)
+        orig_propagate, logger.propagate = logger.propagate, False
+        yield memhandler
+        ok = True
+    finally:
+        logger.propagate = orig_propagate
+        logger.removeHandler(memhandler)
+
+        for handler in handlers:
+            logger.addHandler(handler)
+
+        if not ok:
+            memhandler.flush()
+        else:
+            memhandler.discard()
