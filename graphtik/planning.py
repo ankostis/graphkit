@@ -381,10 +381,12 @@ class Network(Plottable):
 
     .. attribute:: needs
 
-        the "base", all data-nodes that are not produced by some operation
+        the "base", all data-nodes that are not produced by some operation,
+        decided on construction.
     .. attribute:: provides
 
-        the "base", all data-nodes produced by some operation
+        the "base", all data-nodes produced by some operation.
+        decided on construction.
     """
 
     def __init__(self, *operations, graph=None):
@@ -721,7 +723,8 @@ class Network(Plottable):
             The original dag, pruned; not broken.
         :param sorted_nodes:
             an :class:`~boltons:boltons.setutils.IndexedSet` with all graph nodes
-            topo-sorted (including pruned ones)
+            topo-sorted (including pruned ones) by execution order & operation-insertion
+            to break ties (see :func:`_topo_sort_nodes()`).
         :param inputs:
             Not used(!), useless inputs will be evicted when the solution is created.
         :param outputs:
@@ -845,8 +848,15 @@ class Network(Plottable):
 
         return list(steps)
 
-    def _deps_tuplized(self, deps, arg_name):
-        """Stabilize None, ``UNSET`` or string/list-of-strings deps in `graph`."""
+    def _deps_tuplized(
+        self, deps, arg_name
+    ) -> Tuple[Optional[Tuple[str, ...]], Optional[Tuple[str, ...]]]:
+        """
+        Stabilize None or string/list-of-strings, drop names out of graph.
+
+        :return:
+            a 2-tuple (stable-deps, deps-in-graph) or ``(None, None)``
+        """
         if deps is None:
             return None, None
 
