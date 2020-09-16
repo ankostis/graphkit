@@ -784,7 +784,6 @@ class Operation(Plottable, abc.ABC):
         named_inputs,
         outputs=None,
         recompute_from=None,
-        recompute_till=None,
         *kw,
     ):
         """
@@ -800,9 +799,6 @@ class Operation(Plottable, abc.ABC):
             see :meth:`.Pipeline.compute()`.
         :param recompute_from:
             recompute all downstream from those dependencies,
-            see :meth:`.Pipeline.compute()`.
-        :param recompute_till:
-            (UNSTABLE) recompute all upstream from those dependencies,
             see :meth:`.Pipeline.compute()`.
 
         :returns list:

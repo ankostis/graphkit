@@ -322,7 +322,6 @@ class Pipeline(Operation):
         inputs=None,
         outputs=UNSET,
         recompute_from=None,
-        recompute_till=None,
         *,
         predicate: "NodePredicate" = UNSET,
     ) -> "ExecutionPlan":
@@ -337,8 +336,6 @@ class Pipeline(Operation):
             If not given, those set by a previous call to :meth:`withset()` or cstor are used.
         :param recompute_from:
             Described in :meth:`.Pipeline.compute()`.
-        :param recompute_till:
-            (UNSTABLE) Described in :meth:`.Pipeline.compute()`.
         :param predicate:
             Will be stored and applied on the next :meth:`compute()` or :meth:`compile()`.
             If not given, those set by a previous call to :meth:`withset()` or cstor are used.
@@ -361,16 +358,13 @@ class Pipeline(Operation):
         if predicate == UNSET:
             predicate = self.predicate
 
-        return self.net.compile(
-            inputs, outputs, recompute_from, recompute_till, predicate=predicate
-        )
+        return self.net.compile(inputs, outputs, recompute_from, predicate=predicate)
 
     def compute(
         self,
         named_inputs: Mapping = None,
         outputs: Items = UNSET,
         recompute_from: Items = None,
-        recompute_till: Items = None,
         *,
         predicate: "NodePredicate" = UNSET,
         pre_callback=None,
@@ -397,19 +391,13 @@ class Pipeline(Operation):
             *strictly downstream (excluding themselves)* from the dependencies
             listed here, as missing from `named_inputs`.
 
-            * If also `recompute_till` is given, traversing downstream stops
-              when arriving in any dependency contained in that list.
+            * Traversing downstream stops when arriving at any dep in `outputs`.
             * Any dependencies here unreachable downstreams from values in `named_inputs`
               are ignored, but logged.
             * Any dependencies here unreachable upstreams from `outputs` (if given)
               are ignored, but logged.
             * Results may differ even if graph is unchanged, in the presence
               of :term:`overwrite`\\s.
-        :param recompute_till:
-            (UNSTABLE) Refresh all computations arriving to these (string or list) dependencies.
-            In effect, it clears all values in `named_inputs` reachable UPstreams.
-
-            * See bullet notes in `recompute_from`, above.
         :param predicate:
             filter-out nodes before compiling
             If not given, those set by a previous call to :meth:`withset()` or cstor are used.
@@ -471,7 +459,6 @@ class Pipeline(Operation):
                 named_inputs.keys(),
                 outputs,
                 recompute_from,
-                recompute_till,
                 predicate=predicate,
             )
 

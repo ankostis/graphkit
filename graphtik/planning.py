@@ -17,6 +17,7 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
+    Sequence,
     Tuple,
     Union,
 )
@@ -239,18 +240,23 @@ def _topo_sort_nodes(dag) -> iset:
         raise nx.NetworkXUnfeasible(msg).with_traceback(tb)
 
 
-def recompute_inputs(
-    graph, inputs, recompute_from, recompute_till
+def inputs_for_recompute(
+    graph,
+    inputs: Sequence[str],
+    recompute_from: Sequence[str],
+    recompute_till: Sequence[str] = None,
 ) -> Tuple[iset, iset]:
     """
     Clears the inputs between `recompute_from >--<= recompute_till` to clear.
 
+    :param graph:
+        MODIFIED, at most 2 helper nodes inserted
     :param inputs:
-        None or a sequence
+        a sequence
     :param recompute_from:
-        None or a sequence
+        None or a sequence, including any out-of-graph deps (logged))
     :param recompute_till:
-        (UNSTABLE) None or a sequence
+        (optional) a sequence, only in-graph deps.
 
     :return:
         a 2-tuple with the reduced `inputs` by the dependencies that must
@@ -260,51 +266,38 @@ def recompute_inputs(
 
         strict-descendants(recompute_from) & ancestors(recompute_till)
 
-    FIXME: Should recompute() while travesing unsatisfied?  Is `till` relevant??
+    FIXME: merge recompute() with travesing unsatisfied (see ``test_recompute_NEEDS_FIX``)
+    bc it clears inputs of unsatisfied ops (cannot be replaced later)
     """
-    start, stop = "_TMP.RECOMPUTE_FROM", "_TMP.RECOMPUTE_TILL"
-    graph = graph.copy()
+    START, STOP = "_TMP.RECOMPUTE_FROM", "_TMP.RECOMPUTE_TILL"
 
-    datanodes = iset(yield_datanodes(graph.nodes))
-    downstreams_strict = datanodes
-    if recompute_from is not None:
-        recompute_from = iset(recompute_from)  # traversed in logs
-        bad = recompute_from - datanodes
-        if bad:
-            log.info(
-                "... ignoring unknown `recompute_from` dependencies: %s", list(bad)
-            )
-            recompute_from = recompute_from & datanodes
-        if recompute_from:
-            graph.add_edges_from((start, i) for i in recompute_from)
+    deps = set(yield_datanodes(graph.nodes))
+    recompute_from = iset(recompute_from)  # traversed in logs
+    inputs = iset(inputs)  # returned
+    bad = recompute_from - deps
+    if bad:
+        log.info("... ignoring unknown `recompute_from` dependencies: %s", list(bad))
+        recompute_from = recompute_from & deps  # avoid sideffect in `recompute_from`
+    assert recompute_from, f"Given unknown-only `recompute_from` {locals()}"
 
-            downstreams_strict = (
-                iset(yield_datanodes(nx.descendants(graph, start))) - recompute_from
-            )
+    graph.add_edges_from((START, i) for i in recompute_from)
 
-    if recompute_till is None:
-        upstreams = datanodes
-    else:
-        recompute_till = iset(recompute_till)  # traversed in logs
-        bad = recompute_till - datanodes
-        if bad:
-            log.info(
-                "... ignoring unknown `recompute_till` dependencies: %s", list(bad)
-            )
-            recompute_till = recompute_till & datanodes
-        graph.add_edges_from((i, stop) for i in recompute_till)  # edge reversed!
+    between_deps = iset(nx.descendants(graph, START)) & deps - recompute_from
 
-        upstreams = iset(yield_datanodes(nx.ancestors(graph, stop)))
+    if recompute_till:
+        graph.add_edges_from((i, STOP) for i in recompute_till)  # edge reversed!
 
-    between = downstreams_strict & upstreams
-    recomputes = [i for i in inputs if i in between]
-    new_inputs = iset(inputs) - between
+        upstreams = set(nx.ancestors(graph, STOP)) & deps  # upstream
+        between_deps &= upstreams
+
+    recomputes = between_deps & inputs
+    new_inputs = iset(inputs) - recomputes
 
     if log.isEnabledFor(logging.DEBUG):
         log.debug(
             "... recompute x%i data%s means deleting x%i inputs%s, to arrive from x%i %s -> x%i %s.",
-            len(between),
-            list(between),
+            len(between_deps),
+            list(between_deps),
             len(recomputes),
             list(recomputes),
             len(inputs),
@@ -866,7 +859,6 @@ class Network(Plottable):
         inputs: Items = None,
         outputs: Items = None,
         recompute_from=None,
-        recompute_till=None,
         *,
         predicate=None,
     ) -> "ExecutionPlan":
@@ -886,8 +878,6 @@ class Network(Plottable):
             If string, it is converted to a single-element collection.
         :param recompute_from:
             Described in :meth:`.Pipeline.compute()`.
-        :param recompute_till:
-            (UNSTABLE) Described in :meth:`.Pipeline.compute()`.
         :param predicate:
             the :term:`node predicate` is a 2-argument callable(op, node-data)
             that should return true for nodes to include; if None, all nodes included.
@@ -909,15 +899,15 @@ class Network(Plottable):
 
         ok = False
         try:
-            ## Make a stable cache-key.
+            ## Make a stable cache-key,
+            #  ignoring out-of-graph nodes (2nd results).
             #
             inputs, k1 = self._deps_tuplized(inputs, "inputs")
             outputs, k2 = self._deps_tuplized(outputs, "outputs")
             recompute_from, k3 = self._deps_tuplized(recompute_from, "recompute_from")
-            recompute_till, k4 = self._deps_tuplized(recompute_till, "recompute_till")
             if not predicate:
                 predicate = None
-            cache_key = (k1, k2, k3, k4, predicate, is_skip_evictions())
+            cache_key = (k1, k2, k3, predicate, is_skip_evictions())
 
             ## Build (or retrieve from cache) execution plan
             #  for the given dep-lists (excluding any unknown node-names).
@@ -926,9 +916,9 @@ class Network(Plottable):
                 log.debug("... compile cache-hit key: %s", cache_key)
                 plan = self._cached_plans[cache_key]
             else:
-                if recompute_from is not None or recompute_till is not None:
-                    inputs, recomputes = recompute_inputs(
-                        self.graph, inputs, recompute_from, recompute_till
+                if recompute_from:
+                    inputs, recomputes = inputs_for_recompute(
+                        self.graph.copy(), inputs, recompute_from, k2
                     )
 
                 _prune_results = self._prune_graph(inputs, outputs, predicate)

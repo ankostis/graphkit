@@ -1131,6 +1131,35 @@ def test_recompute_resched_false(quarantine_pipeline, recompute, exp_ops):
     assert exe_ops(sol) == exp_ops
 
 
+def test_recompute_till():
+    def by2(n):
+        return 2 * n
+
+    pipe = compose(
+        ...,
+        operation(by2, "f0", "a0", "a1"),
+        operation(by2, "f1", "a1", "a2"),
+        operation(by2, "f2", "a2", "a3"),
+        operation(by2, "f3", "a3", "a4"),
+    )
+    sol = pipe(a0=1)
+    assert exe_ops(sol) == ["f0", "f1", "f2", "f3"]
+    assert sol == {"a0": 1, "a1": 2, "a2": 4, "a3": 8, "a4": 16}
+
+    inp = dict(sol)
+    inp["a1"] = 3
+
+    sol = pipe.compute(inp, outputs="a3", recompute_from="a1")
+    assert exe_ops(sol) == ["f1", "f2"]
+    assert sol == {"a3": 12}
+
+    with evictions_skipped(True):
+        sol = pipe.compute(inp, outputs="a3", recompute_from="a1")
+        sol.plot("t.pdf")
+        assert exe_ops(sol) == ["f1", "f2"]
+        assert sol == {"a0": 1, "a1": 3, "a2": 6, "a3": 12, "a4": 16}
+
+
 def test_recompute_NEEDS_FIX():
     pipe = compose(
         ...,
