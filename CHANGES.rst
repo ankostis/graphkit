@@ -91,12 +91,17 @@ Changelog
 %%%%%%%%%
 
 
-v10.2.0 (14 Sep 2020, @ankostis): pre-callback, drop `op_xxx`, ops-eq-op.name, drop NULL_OP, deprecate parallel/task_context
-----------------------------------------------------------------------------------------------------------------------------
+v10.2.0 (16 Sep 2020, @ankostis): RECOMPUTE, pre-callback, drop `op_xxx`, ops-eq-op.name, drop NULL_OP
+------------------------------------------------------------------------------------------------------
 Should have been a "major" release, but x2 breaks are that important.
 
 + FEAT(pipeline+execution): add :term:`pre_callback` to be invoked prior to computing
   each operation (see ``pre_callback`` arg in :meth:`.Pipeline.compute()`).
+
++ FEAT(pipeline+plan): can :term:`recompute` modified solutions, partial or complete --
+  The ``recompute_from=<dep / list-of-deps>`` argument has been added to
+  :meth:`.Pipeline.compute()`, :meth:`.Pipeline.compile()` & :meth:`.Network.compile()`
+  methods.
 
 + REFACT/break(OP): replace badly-specified public attributes ``op_needs`` & ``op_provides``
   with private :attr:`.FnOp._user_needs` & :attr:`.FnOp._user_provides` -- now
@@ -114,10 +119,18 @@ Should have been a "major" release, but x2 breaks are that important.
 + FEAT/break(pipeline): replace ``NULL_OP`` operation a new ``compose(excludes=..)`` argument,
   in order to delete existing operations when merging pipelines.
 
++ FIX(PLAN): compile cache was ignoring(!) the state of the :term:`eviction` flag.
+
++ FIX(execution): solution ``copy()`` was crashing (for 9 months till now).
+
 + ENH(plot): make all nodes "filled" to facilitate hovering for tooltips.
 
++ fix(plot): "overwrite" tooltip was written "overridden".
+
++ fix(plan): bug when printing a list of "unsolvable graph" error-message.
+
 + FIX(TEST): ``exemethod`` fixture's ``exe_method`` was always empty when interrogated
-  for deciding "xfails".
+  for deciding "xfail"s.
 
 + enh(build): pin ``black`` version, changes in format affect commits.
 
@@ -126,6 +139,8 @@ Should have been a "major" release, but x2 breaks are that important.
 
 + doc(execution+fnop): Mark mark :data:`.execution.task_context` as *unstable API*,
   in favor of supporting a specially-named function argument to receive the same instances.
+
++ doc(site+doctests): use greek letters in algebraic formulas AND dependencies.
 
 
 v10.1.0 (5 Aug 2020, @ankostis): rename return-dict outs; step number badges
