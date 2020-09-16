@@ -58,7 +58,8 @@ def _tristate_set(context_var, enabled):
 
 
 @contextmanager
-def _tristate_armed(context_var: ContextVar, enabled):
+def _tristate_armed(context_var: ContextVar, enabled=True):
+    """Assumes "enabled" if `enabled` flag is None."""
     resetter = context_var.set(enabled if enabled is None else bool(enabled))
     try:
         yield
@@ -70,7 +71,7 @@ debug_enabled = partial(_tristate_armed, _debug)
 """
 Like :func:`set_debug()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_debug = partial(_getter, _debug)
 """
@@ -139,7 +140,7 @@ evictions_skipped = partial(_tristate_armed, _skip_evictions)
 """
 Like :func:`set_skip_evictions()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_skip_evictions = partial(_getter, _skip_evictions)
 """see :func:`set_skip_evictions()`"""
@@ -158,7 +159,7 @@ solution_layered = partial(_tristate_armed, _layered_solution)
 """
 Like :func:`set_layered_solution()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_layered_solution = partial(_getter, _layered_solution)
 """see :func:`set_layered_solution()`"""
@@ -184,7 +185,7 @@ def execution_pool_plugged(pool: "Optional[Pool]"):
     """
     Like :func:`set_execution_pool()` as a context-manager, resetting back to old value.
 
-    .. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+    .. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
     """
     resetter = _execution_pool.set(pool)
     try:
@@ -212,7 +213,7 @@ tasks_in_parallel = partial(_tristate_armed, _parallel_tasks)
 """
 (deprecated) Like :func:`set_parallel_tasks()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_parallel_tasks = partial(_getter, _parallel_tasks)
 """see :func:`set_parallel_tasks()`"""
@@ -233,7 +234,7 @@ tasks_marshalled = partial(_tristate_armed, _marshal_tasks)
 """
 (deprecated) Like :func:`set_marshal_tasks()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_marshal_tasks = partial(_getter, _marshal_tasks)
 """(deprecated) see :func:`set_marshal_tasks()`"""
@@ -256,7 +257,7 @@ operations_endured = partial(_tristate_armed, _endure_operations)
 """
 Like :func:`set_endure_operations()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_endure_operations = partial(_getter, _endure_operations)
 """see :func:`set_endure_operations()`"""
@@ -278,7 +279,7 @@ operations_reschedullled = partial(_tristate_armed, _reschedule_operations)
 """
 Like :func:`set_reschedule_operations()` as a context-manager, resetting back to old value.
 
-.. seealso:: disclaimer about context-managers the top of this :mod:`.config` module.
+.. seealso:: disclaimer about context-managers at the top of this :mod:`.config` module.
 """
 is_reschedule_operations = partial(_getter, _reschedule_operations)
 """see :func:`set_reschedule_operations()`"""
