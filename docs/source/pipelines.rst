@@ -589,7 +589,7 @@ Or we can reduce the workload, and see that *Wednesday* is left without any work
 to do:
 
     >>> sol = week.compute(
-    ...     named_inputs={"backlog": range(9)},
+    ...     solution={"backlog": range(9)},
     ...     outputs=["daily_tasks", "weekly_tasks", "todos"])
 
 .. graphtik::

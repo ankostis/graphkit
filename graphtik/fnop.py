@@ -588,7 +588,7 @@ class FnOp(Operation):
             )
 
     def _prepare_match_inputs_error(
-        self, missing: List, varargs_bad: List, named_inputs: Mapping
+        self, missing: List, varargs_bad: List, solution: Mapping
     ) -> ValueError:
         from .config import is_debug
 
@@ -600,21 +600,21 @@ class FnOp(Operation):
         if varargs_bad:
             errors.append(
                 f"{ner}. Expected varargs inputs to be non-str iterables:"
-                f" { {k: named_inputs[k] for k in varargs_bad} }"
+                f" { {k: solution[k] for k in varargs_bad} }"
             )
-        inputs = dict(named_inputs) if is_debug() else list(named_inputs)
+        inputs = dict(solution) if is_debug() else list(solution)
         errors.append(f"+++inputs: {inputs}")
 
         return textwrap.indent("\n".join(errors), " " * 4)
 
-    def _match_inputs_with_fn_needs(self, named_inputs) -> Tuple[list, list, dict]:
+    def _match_inputs_with_fn_needs(self, solution) -> Tuple[list, list, dict]:
         positional, vararg_vals, kwargs = [], [], {}
         missing, varargs_bad = [], []
         for n in self._fn_needs:
             try:
                 ok = False
                 assert not is_sfx(n) and not is_implicit(n), locals()
-                if n not in named_inputs:
+                if n not in solution:
                     if not is_optional(n) or is_sfx(n):
                         # It means `inputs` < compulsory `needs`.
                         # Compilation should have ensured all compulsories existed,
@@ -624,7 +624,7 @@ class FnOp(Operation):
                     ok = True
                     continue
                 else:
-                    inp_value = named_inputs[n]
+                    inp_value = solution[n]
 
                 keyword = get_keyword(n)
                 if keyword:
@@ -649,7 +649,7 @@ class FnOp(Operation):
                     log.error("Failed while preparing op(%s) need(%s)!", self.name, n)
 
         if missing or varargs_bad:
-            msg = self._prepare_match_inputs_error(missing, varargs_bad, named_inputs)
+            msg = self._prepare_match_inputs_error(missing, varargs_bad, solution)
             raise ValueError(f"Failed matching inputs <=> needs for {self}: \n{msg}")
 
         return positional, vararg_vals, kwargs
@@ -811,7 +811,7 @@ class FnOp(Operation):
 
         return results
 
-    def compute(self, named_inputs=None, outputs: Items = None, *args, **kw) -> dict:
+    def compute(self, solution=None, outputs: Items = None, *args, **kw) -> dict:
         """
         :param named_inputs:
             a :class:`.Solution` instance
@@ -824,10 +824,10 @@ class FnOp(Operation):
         try:
             self.validate_fn_name()
             assert self.name is not None, self
-            if named_inputs is None:
-                named_inputs = {}
+            if solution is None:
+                solution = {}
 
-            positional, varargs, kwargs = self._match_inputs_with_fn_needs(named_inputs)
+            positional, varargs, kwargs = self._match_inputs_with_fn_needs(solution)
             results_fn = self.fn(*positional, *varargs, **kwargs)
             results_op = self._zip_results_with_provides(results_fn)
 

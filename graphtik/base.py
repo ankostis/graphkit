@@ -781,18 +781,18 @@ class Operation(Plottable, abc.ABC):
     @abc.abstractmethod
     def compute(
         self,
-        named_inputs,
+        solution,
         outputs=None,
         recompute_from=None,
         *kw,
     ):
         """
-        Compute (optional) asked `outputs` for the given `named_inputs`.
+        Compute (optional) asked `outputs` for the given `solution`.
 
         It is called by :class:`.Network`.
-        End-users should simply call the operation with `named_inputs` as kwargs.
+        End-users should simply call the operation with `solution` as kwargs.
 
-        :param named_inputs:
+        :param solution:
             the input values with which to feed the computation.
         :param outputs:
             what results to compute,

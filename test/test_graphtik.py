@@ -535,16 +535,16 @@ def test_optional():
     net = compose("test_net", sum_op)
 
     # Make sure output with optional arg is as expected.
-    named_inputs = {"a": 4, "b": 3, "c": 2}
-    results = net(**named_inputs)
+    solution = {"a": 4, "b": 3, "c": 2}
+    results = net(**solution)
     assert "sum" in results
-    assert results["sum"] == sum(named_inputs.values())
+    assert results["sum"] == sum(solution.values())
 
     # Make sure output without optional arg is as expected.
-    named_inputs = {"a": 4, "b": 3}
-    results = net(**named_inputs)
+    solution = {"a": 4, "b": 3}
+    results = net(**solution)
     assert "sum" in results
-    assert results["sum"] == sum(named_inputs.values())
+    assert results["sum"] == sum(solution.values())
 
 
 @pytest.mark.parametrize("reverse", [0, 1])
@@ -725,25 +725,25 @@ def test_optional_per_function_with_same_output(exemethod):
     #
     pipeline = compose("partial_optionals", add_op, sub_op_optional, parallel=exemethod)
     #
-    named_inputs = {"a": 1, "b": 2}
-    assert pipeline(**named_inputs) == {"a": 1, "a+-b": -1, "b": 2}
-    assert pipeline.compute(named_inputs, ["a+-b"]) == {"a+-b": -1}
+    solution = {"a": 1, "b": 2}
+    assert pipeline(**solution) == {"a": 1, "a+-b": -1, "b": 2}
+    assert pipeline.compute(solution, ["a+-b"]) == {"a+-b": -1}
     #
-    named_inputs = {"a": 1}
-    assert pipeline.compute(named_inputs) == {"a": 1, "a+-b": -9}
-    assert pipeline.compute(named_inputs, ["a+-b"]) == {"a+-b": -9}
+    solution = {"a": 1}
+    assert pipeline.compute(solution) == {"a": 1, "a+-b": -9}
+    assert pipeline.compute(solution, ["a+-b"]) == {"a+-b": -9}
 
     # Inverse op order
     #
     pipeline = compose("partial_optionals", sub_op_optional, add_op, parallel=exemethod)
     #
-    named_inputs = {"a": 1, "b": 2}
-    assert pipeline(**named_inputs) == {"a": 1, "a+-b": 3, "b": 2}
-    assert pipeline.compute(named_inputs, ["a+-b"]) == {"a+-b": 3}
+    solution = {"a": 1, "b": 2}
+    assert pipeline(**solution) == {"a": 1, "a+-b": 3, "b": 2}
+    assert pipeline.compute(solution, ["a+-b"]) == {"a+-b": 3}
     #
-    named_inputs = {"a": 1}
-    assert pipeline(**named_inputs) == {"a": 1, "a+-b": -9}
-    assert pipeline.compute(named_inputs, ["a+-b"]) == {"a+-b": -9}
+    solution = {"a": 1}
+    assert pipeline(**solution) == {"a": 1, "a+-b": -9}
+    assert pipeline.compute(solution, ["a+-b"]) == {"a+-b": -9}
 
 
 def test_same_inputs_evictions():

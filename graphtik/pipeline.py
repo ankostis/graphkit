@@ -328,7 +328,7 @@ class Pipeline(Operation):
         """
         Produce a :term:`plan` for the given args or `outputs`/`predicate` narrowed earlier.
 
-        :param named_inputs:
+        :param inputs:
             a string or a list of strings that should be fed to the `needs` of all operations.
         :param outputs:
             A string or a list of strings with all data asked to compute.
@@ -362,7 +362,7 @@ class Pipeline(Operation):
 
     def compute(
         self,
-        named_inputs: Mapping = None,
+        solution: Mapping = None,
         outputs: Items = UNSET,
         recompute_from: Items = None,
         *,
@@ -378,7 +378,7 @@ class Pipeline(Operation):
             If intermediate :term:`planning` is successful, the "global
             :term:`abort run` flag is reset before the :term:`execution` starts.
 
-        :param named_inputs:
+        :param solution:
             A mapping of names --> values that will be fed to the `needs` of all operations.
             Cloned, not modified.
         :param outputs:
@@ -445,8 +445,8 @@ class Pipeline(Operation):
 
         ok = False
         try:
-            if named_inputs is None:
-                named_inputs = {}
+            if solution is None:
+                solution = {}
 
             net = self.net  # jetsam
             if outputs == UNSET:
@@ -456,7 +456,7 @@ class Pipeline(Operation):
 
             log.info("=== Compiling pipeline(%s) ...", self.name)
             plan = net.compile(
-                named_inputs.keys(),
+                solution.keys(),
                 outputs,
                 recompute_from,
                 predicate=predicate,
@@ -466,7 +466,7 @@ class Pipeline(Operation):
             reset_abort()
 
             solution = plan.execute(
-                named_inputs,
+                solution,
                 outputs,
                 name=self.name,
                 pre_callback=pre_callback,

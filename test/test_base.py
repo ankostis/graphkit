@@ -159,7 +159,7 @@ class _ScreamingOperation(Operation):
         self.node_props = {}
         self.rescheduled = self.endured = None
 
-    def compute(self, named_inputs, outputs=None):
+    def compute(self, solution, outputs=None):
         _scream()
 
     def prepare_plot_args(self, _args, **kw):
@@ -173,7 +173,7 @@ class _ScreamingOperation(Operation):
         (
             lambda: fnt.partial(
                 operation(name="test", needs=["a"], provides=["b"])(_scream).compute,
-                named_inputs={"a": 1},
+                solution={"a": 1},
             ),
             "outputs aliases results_fn results_op operation args".split(),
         ),
@@ -204,9 +204,7 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
     params=[
         # NO old-stuff Operation(fn=_jetsamed_fn, name="test", needs="['a']", provides=[]),
         (
-            lambda: fnt.partial(
-                operation(_scream, name="test").compute, named_inputs=None
-            ),
+            lambda: fnt.partial(operation(_scream, name="test").compute, solution=None),
             "outputs aliases results_fn results_op operation args".split(),
         ),
         (
@@ -227,7 +225,7 @@ def test_jetsam_sites_screaming_func(acallable, expected_jetsam):
         (
             lambda: fnt.partial(
                 Pipeline([operation(str)], "name").compute,
-                named_inputs="BOO",
+                solution="BOO",
             ),
             "network plan solution pipeline outputs plot_fpath".split(),
         ),
