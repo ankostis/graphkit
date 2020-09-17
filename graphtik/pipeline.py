@@ -496,9 +496,9 @@ class Pipeline(Operation):
                         "Suppressed error while logging/plotting jetsam of %s: %s(%s)"
                         "\n  +--annotations:%s",
                         self,
+                        type(ex2).__name__,
+                        ex2,
                         jetsam,
-                        type(ex).__name__,
-                        ex,
                         exc_info=True,
                     )
 
