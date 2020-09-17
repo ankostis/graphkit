@@ -106,12 +106,16 @@ class ResolveError(KeyError):
     A :class:`KeyError` raised when a json-pointer does not :func:`resolve <.resolve_path>`.
     """
 
-    # __init__(path, step, i)
+    # __init__(path, step, i, errors)
 
     def __str__(self):
+        errors = "\n".join(
+            f"  +--{indexer}: {type(ex).__name__}({ex})"
+            for indexer, ex in self.errors.items()
+        )
         return (
-            f'Failed resolving step (#{self.index}) "{self.part}" of path {self.path!r}.'
-            "\n  Check debug logs."
+            f'Failed resolving step (#{self.index}) "{self.part}" of path {self.path!r}'
+            f" due to:\n{errors}"
         )
 
     @property
@@ -128,6 +132,11 @@ class ResolveError(KeyError):
     def index(self) -> int:
         """the part's position where the resolution broke"""
         return self.args[2]
+
+    @property
+    def errors(self) -> dict:
+        """The exceptions for all indexers tries while resolving a step path."""
+        return self.args[3] if len(self.args) > 3 else {"Check debug logs": ""}
 
 
 def _log_overwrite(part, doc, child):
@@ -210,8 +219,9 @@ def resolve_path(
 
         >>> resolve_path(dt, '/pi/BAD')
         Traceback (most recent call last):
-        graphtik.jsonpointer.ResolveError: Failed resolving step (#2) "BAD" of path '/pi/BAD'.
-          Check debug logs.
+        graphtik.jsonpointer.ResolveError: Failed resolving step (#2) "BAD" of path '/pi/BAD' due to:
+          +--<built-in function getitem>: TypeError('float' object is not subscriptable)
+          +--<built-in function getattr>: AttributeError('float' object has no attribute 'BAD')
 
 
         >>> resolve_path(dt, '/pi/BAD', 'Hi!')
@@ -238,27 +248,18 @@ def resolve_path(
             doc = root
             continue
 
+        errors = {}
         for ii, indexer in enumerate(part_indexers):
             try:
                 doc = indexer(doc, part)
                 break
             except Exception as ex:
                 if ii > 0:  # ignore int-indexing
-                    log.debug(
-                        "indexer %s failed on step (#%i)%s of json-pointer(%r) with doc(%s), due to: %s ",
-                        indexer,
-                        i,
-                        part,
-                        path,
-                        doc,
-                        ex,
-                        # Don't log int(part) stack-traces.
-                        exc_info=type(ex) is not ValueError
-                        or not str(ex).startswith("invalid literal for int()"),
-                    )
+                    errors[indexer] = ex
+
         else:
             if default is UNSET:
-                raise ResolveError(path, part, i)
+                raise ResolveError(path, part, i, errors)
 
             return default
 
@@ -610,26 +611,16 @@ def pop_path(
             doc = root
             continue
 
+        errors = {}
         for popper in part_poppers:
             try:
                 doc = popper(doc, part, i == last_part)
                 break
             except Exception as ex:
-                log.debug(
-                    "popper %s failed on step (#%i)%s of json-pointer(%r) with doc(%s), due to: %s ",
-                    popper,
-                    i,
-                    part,
-                    path,
-                    doc,
-                    ex,
-                    # Don't log int(part) stack-traces.
-                    exc_info=type(ex) is not ValueError
-                    or not str(ex).startswith("invalid literal for int()"),
-                )
+                errors[popper] = ex
         else:
             if default is UNSET:
-                raise ResolveError(path, part, i)
+                raise ResolveError(path, part, i, errors)
 
             return default
 
