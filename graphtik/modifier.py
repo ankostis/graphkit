@@ -337,7 +337,8 @@ def _modifier(
     :param kw:
         extra kv pairs assigned as :class:`_Modifier` **private** attributes
         (prefixed with ``_`` if not already) only if values are not null.
-        Here used for :term:`implicit`, and client code may extend its own modifiers.
+        Here used for :term:`implicit` & :func:`.opcb` modifiers, while client code
+        may also extend its own modifiers.
     """
     if jsonp is not None:
         if isinstance(jsonp, str):

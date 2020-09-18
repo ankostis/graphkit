@@ -8,10 +8,9 @@ from collections import namedtuple
 
 import pytest
 
-from graphtik import NO_RESULT, compose, operation, sfxed, vararg
+from graphtik import NO_RESULT, compose, opcb, operation, sfxed, vararg
 from graphtik.base import RenArgs
 from graphtik.config import solution_layered
-from graphtik.execution import task_context
 from graphtik.modifier import dep_renamed, modify
 
 
@@ -155,13 +154,16 @@ def test_network_nest_subdocs_LAYERED(solution_layered_true):
     todos = sfxed("backlog", "todos")
 
     @operation(
-        name="wake up", needs="backlog", provides=["tasks", todos], rescheduled=True
+        name="wake up",
+        needs=[opcb("op"), "backlog"],
+        provides=["tasks", todos],
+        rescheduled=True,
     )
-    def pick_tasks(backlog):
+    def pick_tasks(backlog, op):
         if not backlog:
             return NO_RESULT
         # Pick from backlog 1/3 of len-of-chars of my operation's (day) name.
-        n_tasks = int(len(task_context.get().op.name) / 3)
+        n_tasks = int(len(op.name) / 3)
         my_tasks, todos = backlog[:n_tasks], backlog[n_tasks:]
         return my_tasks, todos
 
@@ -318,13 +320,16 @@ def test_network_nest_subdocs_NOT_LAYERED(solution_layered_false):
     todos = sfxed("backlog", "todos")
 
     @operation(
-        name="wake up", needs="backlog", provides=["tasks", todos], rescheduled=True
+        name="wake up",
+        needs=[opcb(), "backlog"],
+        provides=["tasks", todos],
+        rescheduled=True,
     )
-    def pick_tasks(backlog):
+    def pick_tasks(op, backlog):
         if not backlog:
             return NO_RESULT
         # Pick from backlog 1/3 of len-of-chars of my operation's (day) name.
-        n_tasks = int(len(task_context.get().op.name) / 3)
+        n_tasks = int(len(op.name) / 3)
         my_tasks, todos = backlog[:n_tasks], backlog[n_tasks:]
         return my_tasks, todos
 

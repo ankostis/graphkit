@@ -17,6 +17,7 @@ from .modifier import (
     hcat,
     implicit,
     keyword,
+    opcb,
     optional,
     sfx,
     sfxed,

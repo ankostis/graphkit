@@ -166,6 +166,7 @@
         "odot",
         "opargs",
         "opbuilder",
+        "opcb",
         "opname",
         "opneeds",
         "opprovides",

@@ -459,7 +459,7 @@ class Solution(ChainMap, Plottable):
 #: and contains fields to identify the operation call:
 #:
 #: :param op: the operation about to be computed;
-#: :param sol: the slution (might be just a plain dict if it has been marshalled);
+#: :param sol: the slution (might be just a plain dict if it :term:`marshalling`);
 #: :param solid: the operation identity, needed if `sol` is a plain dict,
 OpCb = namedtuple("OpCb", "op, sol, solid")
 
@@ -523,14 +523,6 @@ class _OpTask:
         except Exception:
             sol_items = type(self.sol).__name__
         return f"OpTask({self.op}, sol_keys={sol_items!r})"
-
-
-#: (unstable API) Populated with the :class:`_OpTask` for the currently executing operation.
-#: It does not work for (deprecated) :term:`parallel execution`.
-#:
-#: .. seealso::
-#:     The elaborate example in :ref:`hierarchical-data` section
-task_context: ContextVar[_OpTask] = ContextVar("task_context")
 
 
 def _do_task(task):

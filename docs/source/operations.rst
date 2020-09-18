@@ -52,10 +52,9 @@ positional parameters are not supported:
       {'a_plus_b': 7}
 
 .. tip::
-   (unstable API) In case your function needs to access the :mod:`.execution` machinery
-   or its wrapping operation, it can do that through the :data:`.task_context`
-   (unstable API, not working during (deprecated) :term:`parallel execution`,
-   see :ref:`task-context`)
+   In case your function needs to access the :mod:`.execution` machinery
+   or its wrapping operation, use the :func:`.opcb` modifier
+   (which might not fully work during (deprecated) :term:`parallel execution`).
 
 
 Builder pattern

@@ -212,7 +212,7 @@ Should have been a "major" release, but x2 breaks are that important.
 + doc(parallel): Deprecate(!), but just in docs, in favor of always producing
   a list of "parallelizable batches", to fed to 3rdp parallelizing executors.
 
-+ doc(execution+fnop): Mark mark :data:`.execution.task_context` as *unstable API*,
++ doc(execution+fnop): Mark mark ``.execution.task_context`` as *unstable API*,
   in favor of supporting a specially-named function argument to receive the same instances.
 
 + doc(site+doctests): use greek letters in algebraic formulas AND dependencies.
@@ -432,7 +432,7 @@ v8.3.0 (12 May 2020, @ankostis): mapped-->keyword, drop sol-finalize
 v8.2.0 (11 May 2020, @ankostis): custom Solutions, Task-context
 ===============================================================
 + FEAT(exe): ``compute()`` supports custom Solution classes.
-+ FEAT(exe): underlying functions gain access to wrapping Operation with :data:`.execution.task_context`.
++ FEAT(exe): underlying functions gain access to wrapping Operation with ``.execution.task_context``.
 
 
 v8.1.0 (11 May 2020, @ankostis): drop last plan, Rename/Nest, Netop-->Pipeline, purify modules

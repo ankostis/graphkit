@@ -10,24 +10,24 @@ from time import sleep, time
 
 import pytest
 
-from graphtik import AbortedException, compose, operation, optional
+from graphtik import AbortedException, compose, opcb, operation, optional
 from graphtik.config import abort_run, execution_pool_plugged
-from graphtik.execution import _OpTask, task_context
+from graphtik.execution import _OpTask
 
 from .helpers import abspow, exe_params
 
 
 @pytest.mark.xfail(reason="Spurious passes when threading with on low-cores?")
 def test_task_context(exemethod, request):
-    def check_task_context():
+    def check_task_context(op):
         sleep(0.15)
-        assert task_context.get().op == next(iop), "Corrupted task-context"
+        assert op == next(iop), "Corrupted task-context"
 
     n_ops = 10
     pipe = compose(
         "t",
         *(
-            operation(check_task_context, f"op{i}", provides=f"{i}")
+            operation(check_task_context, f"op{i}", needs=opcb(), provides=f"{i}")
             for i in range(n_ops)
         ),
         parallel=exemethod,

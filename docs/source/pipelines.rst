@@ -456,6 +456,11 @@ In case you wish to cancel the output of a single-result operation,
 return the special value :data:`graphtik.NO_RESULT`.
 
 
+Accessing wrapper operation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autofunction:: graphtik.modifier.opcb
+   :noindex:
+
 .. _hierarchical-data:
 
 Hierarchical data and further tricks
@@ -472,8 +477,8 @@ and the TODOs -- this time we're going to:
    :term:`sideffected` dependencies to modify the original stack of tasks in-place,
    while the workflow is running,
 2. exemplify further the use of :term:`operation nesting` & renaming, and
-3. (unstable API) access the wrapping operation and :mod:`.execution` machinery
-   from within the function by using :data:`.task_context`, and finally
+3. access the wrapping operation and :mod:`.execution` machinery
+   from within the function by using :data:`.opcb`, and finally
 4. store the input backlog, the work done, and the TODOs from the tasks in
    this data-tree::
 
@@ -490,22 +495,21 @@ and the TODOs -- this time we're going to:
 
 First, let's build the single day's workflow, without any nesting:
 
-    >>> from graphtik import NO_RESULT, sfxed
+    >>> from graphtik import NO_RESULT, sfxed, opcb
     >>> from graphtik.base import RenArgs  # type hints for autocompletion.
-    >>> from graphtik.execution import task_context
     >>> from graphtik.modifier import dep_renamed
 
     >>> todos = sfxed("backlog", "todos")
     >>> @operation(name="wake up",
-    ...            needs="backlog",
+    ...            needs=["backlog", opcb()],
     ...            provides=["tasks", todos],
     ...            rescheduled=True
     ... )
-    ... def pick_tasks(backlog):
+    ... def pick_tasks(backlog, op):
     ...     if not backlog:
     ...         return NO_RESULT
     ...     # Pick from backlog 1/3 of len-of-chars of my day-name.
-    ...     n_tasks = int(len(task_context.get().op.name) / 3)
+    ...     n_tasks = int(len(op.name) / 3)
     ...     my_tasks, todos = backlog[:n_tasks], backlog[n_tasks:]
     ...     return my_tasks, todos
 
@@ -515,14 +519,17 @@ The actual work is emulated with a :term:`conveyor operation`:
 
     >>> weekday = compose("weekday", pick_tasks, do_tasks)
 
-Notice that the "backlog" :term:`sideffected` result of the "wakeup" operation
-is also listed in its *needs*;  through this trick, each daily tasks can remove
-the tasks it completed from the initial backlog of tasks, for the next day to pick up.
-The "todos" sfx is just a name to denote the kind of modification performed
-on the "backlog"
+* Notice that the "backlog" :term:`sideffected` result of the "wakeup" operation
+  is also listed in its *needs*;  through this trick, each daily tasks can remove
+  the tasks it completed from the initial backlog of tasks, for the next day to pick up.
+  The "todos" sfx is just a name to denote the kind of modification performed
+  on the "backlog"
 
-Note also that the tasks passed from "wake up" --> "work!" operations are not hierarchical,
-but kept "private" in each day by nesting them with a dot(``.``):
+* Note also that the tasks passed from "wake up" --> "work!" operations are not hierarchical,
+  but kept "private" in each day by nesting them with a dot(``.``):
+
+* Note finally the use of the :func:`.opcb` modifier to access the :mod:`.execution`
+  machinery.
 
 .. graphtik::
 
