@@ -18,9 +18,9 @@ Graphtik Changelog
   <hidden from RTD docs, as comment>
 
   - [+] ENH: planning reports unsatisfied node modus, for plotting
-  - [v] ENH: Plan accepts previous solutions
-    - [v] fix: FnOp.compute() should (or should not?) accept Pipeline.compute() args.
-    - [v] FEAT: ``compute(solution, recompute_from=["input_1"])``
+  - [+] ENH: Plan accepts previous solutions
+    - [+] fix: FnOp.compute() should (or should not?) accept Pipeline.compute() args.
+    - [+] FEAT: ``compute(solution, recompute_from=["input_1"])``
 
   - Configs:
     - [ ] FEAT: drop MANY contextvars with 1 cfg-dict in contextvars?
@@ -34,14 +34,16 @@ Graphtik Changelog
       - [ ] keep SFX in outputs
 
   - Compose:
-    - [ ] REFACT/FEAT/ENH: Autograph functions by annotating
+    - [+] feat: add a real ``implicit`` modifier.
     - [?] REFACT: separate op-decorator from factory (to facilitate defining conveyor operations).
     - [ ] FEAT: +1 merge method for pipelines: nest=False: treat Pipelines as Operations
-    - [ ] feat: add a real ``implicit`` modifier.
+    - [ ] break/enh(modifier): augment modifier table with `implicits` for REPR.
+    - [ ] BREAK(modif): "stuffy" names for `is_xxx(modifier)` funcs returning stuff.
+    - [ ] REFACT/FEAT/ENH: Autograph functions by annotating
 
-  - Plan:
-    - [ ] FEAT: break cycles with dijkstra; +weights.
-    - [ ] ENH: virtual graph roots for inputs & outputs, to replace custom node-visiting algos
+  - Planning:
+    - [ ] FEAT: break cycles with dijkstra; +weights?
+    - [ ] ENH: link graph inputs/outputs to virtual root-nodes, to replace custom visiting algos
           (eg unsatisfied-ops, prune-by-outs)
     - [ ] FEAT: per-operation EVICTs
       (+cat: Compose)
@@ -52,24 +54,39 @@ Graphtik Changelog
   - Execute:
     - [ ] ENH/REFACT: use Signature.Param from `inspect` module to match needs & zip provides
     - [?] refact: named_inputs --> sol
-    - [ ] FEAT: varargs for Outs collect all outs to the very end
-      (+cat: Compose)
-    - [ ] ???: Should sfxed's sfx-lists become implicits? (to be accessed regularly downstream)
+    - [ ] FEAT(fnop): varargs for Outs collect all outs to the very end
+    - [ ] FEAT: +2 callbacks before marshalling: (pre_batch, post_batch) (olds: pre_op, post_op).
+    - [ ] BREAK/FEAT: allow marking SFX-LIST items:
+      1. Implicits (default), to be checked/resolved downstream (see "FEAT: +2 callbacks"), or
+      2. Sfx (pure), as they are now).
+    - [] Solution-retriever modifier `opcb()`;
+      WONTFIX: easier and more generic to access solution from Op-context.
+      REINSTATED     - [X] Solution-retriever modifier;
+      WONTFIX: easier and more generic to access solution from Op-context.
+      REINSTATED to support simple conveyor belts from json-pointer paths.
+      bc it's simpler and does not have any threading issues.
 
     - **Solution:**
-      - [x] DROP accessors?
-        - [ ] DROP/ENH: Solution updates GivenInputs only, yet still layers jsonp-refer to its values.
+      - [+] DROP/ENH: Solution updates GivenInputs only, yet still layers jsonp-refer to its values.
+      - [+] FEAT: ``pd.concat()`` --> modifier+accessor, to avoid sfxed for multi-column updates.
+      - [+] FEAT: + `post_callback` with `pre_callback` --> `callbacks` tuple
+        (+cat: Compose)
+        - [+] ENH(jsonp): mass-concat (not one-by-one).
+        - [ ] ENH: validate Implicits indeed added (in `post_op_callback`)?
         - [ ] FEAT: VALIDATE (by user) items on Solution-Insert (with a `post_callback`?):
           - auto-assertions {jsonp--> validators}
           - compare overwrites while recomputing
-      - [ ] FEAT: ``pd.concat()`` --> modifier+accessor, to avoid sfxed for multi-column updates.
-        (+cat: Compose)
+          - check implicits exist
+        - [ ] FEAT: teach FnOps about ROOT(full solution) and CWD(cw-document)
+          to resolve also any NON-jsonp dependencies from
+          (needs to finalize jsonp-ROOT implementation)
+          (+cat: Compose)
 
   - plot:
     - [ ] Badges on Data
-    - [ ] update legend (or generate it dynamically)
-    - [ ] sphinxext: extend standard `doctest` module (instead of sphinx-builder)
+    - [ ] generate legend dynamically
     - [ ] SPHINXEXT: autodoc Pipelines & Ops
+    - [ ] sphinxext: extend standard `doctest` module (instead of sphinx-builder)
 
   - Docs:
     - [ ] REFACT: move GitHub organization `pygraphkit --> pygraphtik` (+Travis, +RTD)
@@ -79,29 +96,28 @@ Graphtik Changelog
 
 
   - DROPPED
-    - [X] Solution-retriever modifier;
-      WONTFIX: easier and more generic to access solution from Op-context.
-      REINSTATED to support simple conveyor belts from json-pointer paths.
     - [X] `solution.executed` pre-populated with all operations
     - [X] parallel batches restart from last position in steps
     - [X] covert custom op classes & modifiers directly into mergeable networkx graphs;
       WONTFIX bc foreign function would not work with merged deps.
     - [X] conditionals
       WONTFIX bc it permits pipelines with too complex execution flow to debug.
+    - [X] DROP accessors:
+      REJECTED already used for hcat()/vcat()
 
     - v9.0.0
     - [X] Accept jsonp inputs & outputs,
       WONTFIX user's business to expand into given Inputs, Outputs already working.
-    - [x] REVERT rename subdocs;
+    - [X] REVERT rename subdocs;
       WONTFIX bc eventually made it work correctly and added TC.
-    - [x] REFACT: separate op-decorator from factory
+    - [X] REFACT: separate op-decorator from factory
       (to facilitate defining conveyor operations):
       NO, simplify passing fn=None.
-    - [x] Nest-rename subdocs: not by default, possible by renamer/nester.
-    - [x] accessors accept default (not to search x2 contain+get_path)
+    - [X] Nest-rename subdocs: not by default, possible by renamer/nester.
+    - [X] accessors accept default (not to search x2 contain+get_path)
       WONTFIX bc not worth it.
-    - [x] Simplify Task-context by injecting it in a parametric argument of `fn`.
-      NO, current solution works without `inspect` module.
+    - [X] Simplify Task-context by injecting it in a parametric argument of `fn`.
+      NO, `opcb` modifier works without `inspect` module.
 
   + See :gg:`1`.
 
@@ -109,6 +125,39 @@ Graphtik Changelog
 Changelog
 %%%%%%%%%
 :GitHub Releases: https://github.com/pygraphkit/graphtik/releases
+
+v10.3.0 (21 Sep 2020, @ankostis): CONCAT pandas, Hierarchical overwrites, implicit(), post-cb
+---------------------------------------------------------------------------------------------
++ FEAT(solution+jsonp)): can extend in place pandas (dataframes & series) horizontally/vertically
+  with :term:`pandas concatenation`.
+  Usefull for when working with :ref:`Pandas advanced indexing <pandas:advanced.hierarchical>`.
+  or else, sideffecteds are needed to break read-update cycles on dataframes.
+
+  + fix(jsonp): :func:`.set_path_value()` should have failed to modify object attributes
+    (but not mass-updated, utilized by :term:`accessor`\s).
+
++ FEAT/fix(solution): :term:`overwrite`\s work properly for non-:term:`layer`\ed solutions.
+
+  + refact: dropped ``_layers`` solution-attribute, role passed to (existing) ``executed``.
+
++ FEAT(execution): support also *post*\-:term:`callbacks`.
+
++ FEAT/DROP(modifier): added x3 new modifiers, :func:`.vcat` and :func:`.hcat`,
+  (and respective accessors), :func:`.implicit` -- dropped never-used ``accessor`` modifier.
+
++ FEAT: parse string explicitly passed in ``jsonp=...`` argument in modifiers.
+
++ feat(modifier+fnop): keep just the last part of a keyword+jsonp dependency,
+  to save an explicit conversion (jsonps are invalid as python-identifiers).
+
++ break(modifier+fnop): forbid :term:`implicit` term:`sfxed` -- hard to find a solid use-case,
+  pure `sfx` would be preferable in that case.
+
++ fix: forbid :term:`aliasing <alias>` implicits -- they wouldn't work anyway.
+
++ enh(compose): check for node type collisions (i.e. a dependency name clashing
+  with some operation name).
+
 
 v10.2.1 (18 Sep 2020, @ankostis): plot sol bugfix
 -------------------------------------------------
@@ -121,7 +170,7 @@ v10.2.0 (16 Sep 2020, @ankostis): RECOMPUTE, pre-callback, drop `op_xxx`, ops-eq
 ------------------------------------------------------------------------------------------------------
 Should have been a "major" release, but x2 breaks are that important.
 
-+ FEAT(pipeline+execution): add ``pre_callback`` to be invoked prior to computing
++ FEAT(pipeline+execution): add term ``pre_callback`` to be invoked prior to computing
   each operation (see ``pre_callback`` arg in :meth:`.Pipeline.compute()`).
 
 + FEAT(pipeline+plan): can :term:`recompute` modified solutions, partial or complete --
