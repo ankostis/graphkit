@@ -349,11 +349,17 @@ def _modifier(
     elif "/" in name and jsonp is None and (sideffected is None or sfx_list):
         from .jsonpointer import jsonp_path
 
-        kw["_jsonp"] = jsonp_path(name)
+        jsonp = kw["_jsonp"] = jsonp_path(name)
     # Don't override user's accessor.
     #
-    if not accessor and kw.get("_jsonp"):
+    if not accessor and jsonp:
         accessor = JsonpAcc()
+
+    ## Keep just the last part from `jsonp`s,
+    #  if no `keyword` given.
+    #
+    if keyword and jsonp and keyword == name:
+        keyword = jsonp[-1]
 
     args = (name, keyword, optional, accessor, sideffected, sfx_list)
     formats = _match_modifier_args(*args)
@@ -726,6 +732,7 @@ def keyword(
 
     * The value of the ``name`` dependency is read from the `solution`, and then
     * that value is passed in the function as a *keyword-argument* named ``keyword``.
+    * If it's a :term:`jsonp` and no `keyword` given, defaults to the last step.
 
     When used on :term:`provides` dependencies:
 

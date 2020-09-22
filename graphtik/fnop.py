@@ -638,12 +638,6 @@ class FnOp(Operation):
 
                 keyword = get_keyword(n)
                 if keyword:
-                    ## Keep jsut the last part from `jsonp`s.
-                    #
-                    steps = get_jsonp(keyword)
-                    if steps:
-                        keyword = steps[-1]
-
                     kwargs[keyword] = inp_value
 
                 elif is_vararg(n):
